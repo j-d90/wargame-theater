@@ -1,0 +1,37 @@
+{
+  "id": "tiny",
+  "name": "Tiny Test Scenario",
+  "description": "Fictional one-corps scenario for engine tests. The link to Forward Depot B is cut on day 15 and restored on day 25; 1st Division expands on day 10 and collapses on day 30.",
+  "seed": 1991,
+  "days": 43,
+  "nations": ["blueland"],
+  "formations": [
+    { "id": "blueland", "name": "Blueland", "nation": "blueland", "echelon": "nation", "position": { "x": 0, "y": 0 }, "supplyNode": "main-depot" },
+    { "id": "south-theater", "name": "Southern Theater", "nation": "blueland", "echelon": "theater", "parent": "blueland", "position": { "x": 100, "y": 50 } },
+    { "id": "i-corps", "name": "I Corps", "nation": "blueland", "echelon": "corps", "parent": "south-theater", "position": { "x": 120, "y": 60 } },
+    { "id": "div-1", "name": "1st Division", "nation": "blueland", "echelon": "division", "parent": "i-corps", "position": { "x": 140, "y": 70 }, "supplyNode": "fwd-depot-a", "aggregated": true },
+    { "id": "bde-1-1", "name": "1st Brigade", "nation": "blueland", "echelon": "brigade", "parent": "div-1", "template": "test-brigade", "position": { "x": 142, "y": 72 } },
+    { "id": "bde-1-2", "name": "2nd Brigade", "nation": "blueland", "echelon": "brigade", "parent": "div-1", "template": "test-brigade", "position": { "x": 138, "y": 68 }, "strengthPct": 90, "readiness": 900 },
+    { "id": "div-2", "name": "2nd Division", "nation": "blueland", "echelon": "division", "parent": "i-corps", "template": "test-division", "position": { "x": 150, "y": 55 }, "supplyNode": "fwd-depot-a" },
+    { "id": "div-3", "name": "3rd Division", "nation": "blueland", "echelon": "division", "parent": "i-corps", "template": "test-division", "position": { "x": 160, "y": 40 }, "supplyNode": "fwd-depot-b" }
+  ],
+  "supply": {
+    "nodes": [
+      { "id": "port-alpha", "name": "Port Alpha", "kind": "source", "position": { "x": 0, "y": 0 }, "capacity": 20000, "stock": 5000, "productionPerTick": 40 },
+      { "id": "main-depot", "name": "Main Depot", "kind": "depot", "position": { "x": 80, "y": 40 }, "capacity": 6000, "stock": 3000 },
+      { "id": "fwd-depot-a", "name": "Forward Depot A", "kind": "depot", "position": { "x": 135, "y": 62 }, "capacity": 2000, "stock": 1000 },
+      { "id": "fwd-depot-b", "name": "Forward Depot B", "kind": "depot", "position": { "x": 155, "y": 45 }, "capacity": 1500, "stock": 1000 }
+    ],
+    "links": [
+      { "id": "msr-1", "from": "port-alpha", "to": "main-depot", "mode": "road", "capacityPerTick": 40, "variance": 100, "vulnerability": 0.2 },
+      { "id": "road-a", "from": "main-depot", "to": "fwd-depot-a", "mode": "road", "capacityPerTick": 30, "variance": 150, "vulnerability": 0.4 },
+      { "id": "road-b", "from": "main-depot", "to": "fwd-depot-b", "mode": "road", "capacityPerTick": 20, "variance": 150, "vulnerability": 0.6 }
+    ]
+  },
+  "events": [
+    { "day": 10, "type": "expand", "formation": "div-1" },
+    { "day": 15, "type": "setDisrupted", "target": { "kind": "link", "id": "road-b" }, "disrupted": true },
+    { "day": 25, "type": "setDisrupted", "target": { "kind": "link", "id": "road-b" }, "disrupted": false },
+    { "day": 30, "type": "aggregate", "formation": "div-1" }
+  ]
+}

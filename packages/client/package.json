@@ -1,0 +1,15 @@
+{
+  "name": "@tow/client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@tow/content": "0.0.0",
+    "@tow/sim": "0.0.0"
+  }
+}

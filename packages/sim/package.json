@@ -1,0 +1,12 @@
+{
+  "name": "@tow/sim",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@tow/content": "0.0.0"
+  }
+}

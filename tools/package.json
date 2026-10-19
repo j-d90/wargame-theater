@@ -1,0 +1,10 @@
+{
+  "name": "@tow/tools",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@tow/content": "0.0.0",
+    "@tow/sim": "0.0.0"
+  }
+}

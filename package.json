@@ -1,0 +1,26 @@
+{
+  "name": "theater-of-war",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "tools"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "npm run dev -w @tow/client",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p packages/content && tsc -p packages/content/test && tsc -p packages/sim && tsc -p packages/sim/test && tsc -p packages/client && tsc -p tools",
+    "sim": "tsx tools/run-scenario.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^7.3.7",
+    "vitest": "^5.0.5"
+  }
+}
