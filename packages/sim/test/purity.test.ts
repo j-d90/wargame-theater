@@ -17,6 +17,7 @@ const FORBIDDEN: [RegExp, string][] = [
   [/Math\.random/, 'Math.random (use the seeded RNG)'],
   [/Date\.now|new Date\(/, 'wall-clock time'],
   [/performance\.now/, 'wall-clock time'],
+  [/Math\.(sin|cos|tan|asin|acos|atan2?|sinh|cosh|tanh|exp|expm1|log|log1p|log2|log10|pow|hypot|cbrt)\b/, 'transcendental Math functions (results can differ between JS engines)'],
   [/\bwindow\.|\bdocument\.|\bnavigator\./, 'DOM globals'],
   [/from ['"](node:|fs['"]|path['"])/, 'Node built-ins'],
   [/@tow\/client|packages\/client/, 'client imports'],

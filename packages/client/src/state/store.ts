@@ -1,0 +1,74 @@
+// A tiny external store: React panels read it through useApp, the Pixi view
+// subscribes to it directly so map redraws never go through React.
+import { useSyncExternalStore } from 'react';
+import type { WorldSummary } from '@tow/sim';
+import type { Selection } from '../views/theater/hit.ts';
+import type { Mode } from '../views/theater/TheaterView.ts';
+import type { ScenarioInfo, SpeedSetting } from '../worker/protocol.ts';
+
+export interface Message {
+  id: number;
+  text: string;
+  kind: 'error' | 'info';
+}
+
+export interface AppState {
+  scenario: ScenarioInfo | null;
+  summary: WorldSummary | null;
+  speed: SpeedSetting;
+  selection: Selection | null;
+  mode: Mode;
+  messages: Message[];
+  /** Ask the map to centre on a point; `seq` changes on every request. */
+  focus: { x: number; y: number; seq: number } | null;
+}
+
+type Listener = () => void;
+
+export function createStore<T>(initial: T) {
+  let state = initial;
+  const listeners = new Set<Listener>();
+  return {
+    get: () => state,
+    set(patch: Partial<T> | ((s: T) => Partial<T>)) {
+      state = { ...state, ...(typeof patch === 'function' ? patch(state) : patch) };
+      for (const l of listeners) l();
+    },
+    subscribe(l: Listener) {
+      listeners.add(l);
+      return () => {
+        listeners.delete(l);
+      };
+    },
+  };
+}
+
+export const store = createStore<AppState>({
+  scenario: null,
+  summary: null,
+  speed: 0,
+  selection: null,
+  mode: 'select',
+  messages: [],
+  focus: null,
+});
+
+/** Subscribe a component to one slice of state. Selectors must return stable values. */
+export function useApp<T>(select: (s: AppState) => T): T {
+  return useSyncExternalStore(store.subscribe, () => select(store.get()));
+}
+
+let nextMessageId = 1;
+export function notify(text: string, kind: Message['kind'] = 'info') {
+  const id = nextMessageId++;
+  store.set((s) => ({ messages: [...s.messages.slice(-3), { id, text, kind }] }));
+  setTimeout(() => store.set((s) => ({ messages: s.messages.filter((m) => m.id !== id) })), 5000);
+}
+
+export function select(selection: Selection | null) {
+  store.set({ selection, mode: 'select' });
+}
+
+export function focusOn(p: { x: number; y: number }) {
+  store.set((s) => ({ focus: { ...p, seq: (s.focus?.seq ?? 0) + 1 } }));
+}

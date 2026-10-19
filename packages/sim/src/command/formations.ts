@@ -70,7 +70,7 @@ export function effectiveSupplyNode(world: WorldState, id: string): string | nul
 
 /** Combine stats: sum extensive ones, strength-weighted average (rounded) for intensive ones. */
 export function combineStats(parts: readonly FormationStats[]): FormationStats {
-  const out: FormationStats = { strength: 0, readiness: 0, morale: 0, stock: 0, stockCap: 0, supplyPerTick: 0 };
+  const out: FormationStats = { strength: 0, readiness: 0, morale: 0, stock: 0, stockCap: 0, supplyPerTick: 0, speed: 0 };
   for (const key of EXTENSIVE_STATS) {
     for (const p of parts) out[key] += p[key];
   }
@@ -87,6 +87,7 @@ export function combineStats(parts: readonly FormationStats[]): FormationStats {
       out[key] = Math.floor((sum + Math.floor(parts.length / 2)) / parts.length);
     }
   }
+  if (parts.length > 0) out.speed = Math.min(...parts.map((p) => p.speed));
   return out;
 }
 
@@ -106,28 +107,48 @@ function shiftPermille(value: number, base: number, now: number): number {
   return 1000 - Math.round(((1000 - value) * (1000 - now)) / (1000 - base));
 }
 
-/** Collapse a formation's subtree into a single aggregate block. */
+/**
+ * Collapse a formation's subtree into a single aggregate block, placed at the
+ * strength-weighted centre of its parts. The parts' move orders are dropped:
+ * the block now takes orders as one unit.
+ */
 export function aggregate(world: WorldState, id: string): void {
   const f = get(world, id);
   if (f.childIds.length === 0) throw new Error(`aggregate: "${id}" has no children`);
   if (f.aggregated) throw new Error(`aggregate: "${id}" is already aggregated`);
   if (hasAggregatedAncestor(world, id)) throw new Error(`aggregate: "${id}" is hidden inside an aggregated ancestor`);
-  const stats = combineStats(childFrontier(world, f).map((c) => c.stats));
+  const parts = childFrontier(world, f);
+  const stats = combineStats(parts.map((c) => c.stats));
+  let wx = 0;
+  let wy = 0;
+  let w = 0;
+  for (const p of parts) {
+    const pw = Math.max(1, p.stats.strength);
+    wx += p.position.x * pw;
+    wy += p.position.y * pw;
+    w += pw;
+    p.order = null;
+  }
+  f.position = { x: wx / w, y: wy / w };
+  f.branch = parts.every((p) => p.branch === parts[0]!.branch) ? parts[0]!.branch : null;
+  f.baselinePosition = { ...f.position };
   f.stats = stats;
   f.baseline = { ...stats };
   f.aggregated = true;
+  f.order = null;
 }
 
 /**
  * Expand an aggregated formation. Whatever happened to the aggregate since it was
  * collapsed is pushed down onto the formations that now become active:
  * extensive stats are rescaled proportionally (largest remainder), intensive
- * stats via shiftPermille. With no change in between, this restores the exact
- * pre-aggregation state.
+ * stats via shiftPermille, and positions shift by however far the block moved.
+ * With no change in between, this restores the exact pre-aggregation state.
+ * Handing the block's move order down to its parts is the caller's job.
  */
 export function expand(world: WorldState, id: string): void {
   const f = get(world, id);
-  if (!f.aggregated || f.baseline === null) throw new Error(`expand: "${id}" is not aggregated`);
+  if (!f.aggregated || f.baseline === null || f.baselinePosition === null) throw new Error(`expand: "${id}" is not aggregated`);
   if (hasAggregatedAncestor(world, id)) throw new Error(`expand: "${id}" is hidden inside an aggregated ancestor`);
   const parts = childFrontier(world, f);
   const now = f.stats;
@@ -140,7 +161,10 @@ export function expand(world: WorldState, id: string): void {
   const supplyPerTick = split('supplyPerTick');
   const stock = split('stock', stockCap);
 
+  const dx = f.position.x - f.baselinePosition.x;
+  const dy = f.position.y - f.baselinePosition.y;
   parts.forEach((p, i) => {
+    p.position = { x: p.position.x + dx, y: p.position.y + dy };
     const s = p.stats;
     s.strength = strength[i]!;
     s.stockCap = stockCap[i]!;
@@ -151,4 +175,6 @@ export function expand(world: WorldState, id: string): void {
 
   f.aggregated = false;
   f.baseline = null;
+  f.baselinePosition = null;
+  f.order = null;
 }

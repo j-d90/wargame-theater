@@ -13,14 +13,20 @@
     "dev": "npm run dev -w @tow/client",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -p packages/content && tsc -p packages/content/test && tsc -p packages/sim && tsc -p packages/sim/test && tsc -p packages/client && tsc -p tools",
-    "sim": "tsx tools/run-scenario.ts"
+    "typecheck": "tsc -p packages/content && tsc -p packages/content/test && tsc -p packages/sim && tsc -p packages/sim/test && tsc -p packages/client && tsc -p packages/client/test && tsc -p tools",
+    "sim": "tsx tools/run-scenario.ts",
+    "build:map": "tsx tools/geo/build-gulf-map.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",
+    "@types/pngjs": "^6.0.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "pngjs": "^7.0.0",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
-    "vite": "^7.3.7",
+    "vite": "^8.3.4",
     "vitest": "^5.0.5"
   }
 }

@@ -1,11 +1,16 @@
-import { NationSchema, UnitTemplateSchema, type Nation, type UnitTemplate } from './schemas.ts';
+import { GameMapSchema, NationSchema, UnitTemplateSchema, type GameMap, type Nation, type UnitTemplate } from './schemas.ts';
 import blueland from '../nations/blueland.json';
+import coalitionSandbox from '../nations/coalition-sandbox.json';
 import testUnits from '../units/test.json';
+import genericUnits from '../units/generic.json';
 import tiny from '../scenarios/test/tiny.json';
+import gulfSandbox from '../scenarios/gulf-sandbox/scenario.json';
+import gulfMap from '../maps/gulf/terrain.json';
 
 export interface Catalog {
   units: ReadonlyMap<string, UnitTemplate>;
   nations: ReadonlyMap<string, Nation>;
+  maps: ReadonlyMap<string, GameMap>;
 }
 
 function indexById<T extends { id: string }>(items: T[], kind: string): Map<string, T> {
@@ -17,17 +22,19 @@ function indexById<T extends { id: string }>(items: T[], kind: string): Map<stri
   return map;
 }
 
-export function buildCatalog(raw: { units: unknown[]; nations: unknown[] }): Catalog {
+export function buildCatalog(raw: { units: unknown[]; nations: unknown[]; maps?: unknown[] }): Catalog {
   return {
     units: indexById(raw.units.map((u) => UnitTemplateSchema.parse(u)), 'unit template'),
     nations: indexById(raw.nations.map((n) => NationSchema.parse(n)), 'nation'),
+    maps: indexById((raw.maps ?? []).map((m) => GameMapSchema.parse(m)), 'map'),
   };
 }
 
 export const defaultCatalog: Catalog = buildCatalog({
-  units: [...testUnits],
-  nations: [blueland],
+  units: [...testUnits, ...genericUnits],
+  nations: [blueland, coalitionSandbox],
+  maps: [gulfMap],
 });
 
 /** Raw scenario JSON by id; validate with loadScenario before use. */
-export const scenarioFiles: Readonly<Record<string, unknown>> = { tiny };
+export const scenarioFiles: Readonly<Record<string, unknown>> = { tiny, 'gulf-sandbox': gulfSandbox };

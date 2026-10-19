@@ -1,4 +1,4 @@
-import type { Echelon, Position, ResolvedScenario, ScenarioEvent } from '@tow/content';
+import type { Echelon, Position, ResolvedEvent, ResolvedScenario } from '@tow/content';
 import { createRng, type RngState } from './rng.ts';
 import { DEFAULT_RULES, type Rules } from './rules.ts';
 import { TICKS_PER_DAY, tickAt } from './time.ts';
@@ -9,6 +9,7 @@ import { aggregate, depthOf } from '../command/formations.ts';
 export const EXTENSIVE_STATS = ['strength', 'stock', 'stockCap', 'supplyPerTick'] as const;
 /** Stats averaged (weighted by strength) when formations aggregate. Permille. */
 export const INTENSIVE_STATS = ['readiness', 'morale'] as const;
+// `speed` is neither: an aggregate moves at the pace of its slowest part.
 
 export interface FormationStats {
   strength: number;
@@ -19,6 +20,25 @@ export interface FormationStats {
   stockCap: number;
   /** Consumption per tick. */
   supplyPerTick: number;
+  /** Open-terrain march speed at full readiness, km per day. */
+  speed: number;
+}
+
+export interface MoveOrder {
+  destination: Position;
+  /** Remaining waypoints; the last one is the destination. */
+  path: Position[];
+}
+
+/** Static terrain the sim moves on. Copied from the map so saves are self-contained. */
+export interface TerrainGrid {
+  cellKm: number;
+  cols: number;
+  rows: number;
+  /** One class code per cell, row-major from the north-west corner. */
+  cells: string;
+  /** Movement factor per class code, permille. 0 = impassable. */
+  speeds: Record<string, number>;
 }
 
 export interface Formation {
@@ -26,6 +46,8 @@ export interface Formation {
   name: string;
   nation: string;
   echelon: Echelon;
+  /** Unit type from the template; for an aggregate, its parts' shared type or null if mixed. */
+  branch: string | null;
   parentId: string | null;
   /** Sorted by id. */
   childIds: string[];
@@ -41,6 +63,9 @@ export interface Formation {
   stats: FormationStats;
   /** Stats at the moment of aggregation, used to push changes back down on expand. */
   baseline: FormationStats | null;
+  /** Position at the moment of aggregation, so children move with the block on expand. */
+  baselinePosition: Position | null;
+  order: MoveOrder | null;
 }
 
 export interface SupplyNode {
@@ -83,6 +108,8 @@ export interface WorldState {
   /** Pending scripted commands, sorted by tick. */
   schedule: TimedCommand[];
   rules: Rules;
+  /** Null when the scenario has no map: open, flat ground everywhere. */
+  terrain: TerrainGrid | null;
 }
 
 /** Ids of a record in sorted order. All sim iteration goes through this. */
@@ -94,12 +121,14 @@ export function rngStream(world: WorldState, label: string): RngState {
   return (world.rng[label] ??= createRng(world.seed, label));
 }
 
-function eventToCommand(e: ScenarioEvent): TimedCommand {
+function eventToCommand(e: ResolvedEvent): TimedCommand {
   const tick = tickAt(e.day, e.hour ?? 0);
   switch (e.type) {
     case 'expand':
     case 'aggregate':
       return { tick, type: e.type, formation: e.formation };
+    case 'move':
+      return { tick, type: 'move', formation: e.formation, to: { ...e.to } };
     case 'setDisrupted':
       return { tick, type: 'setDisrupted', target: e.target, disrupted: e.disrupted };
   }
@@ -111,14 +140,16 @@ export interface CreateWorldOptions {
 }
 
 export function createWorld(resolved: ResolvedScenario, options: CreateWorldOptions = {}): WorldState {
-  const { scenario, units } = resolved;
+  const { scenario, units, map } = resolved;
   const formations: Record<string, Formation> = {};
 
   for (const spec of scenario.formations) {
-    let stats: FormationStats = { strength: 0, readiness: 0, morale: 0, stock: 0, stockCap: 0, supplyPerTick: 0 };
+    let branch: string | null = null;
+    let stats: FormationStats = { strength: 0, readiness: 0, morale: 0, stock: 0, stockCap: 0, supplyPerTick: 0, speed: 0 };
     if (spec.template !== undefined) {
       const t = units.get(spec.template);
       if (!t) throw new Error(`createWorld: unknown template "${spec.template}"`);
+      branch = t.branch ?? null;
       const pct = spec.strengthPct ?? 100;
       const supplyPerTick = Math.ceil((t.supplyPerTick * pct) / 100);
       const stockCap = supplyPerTick * TICKS_PER_DAY * t.stockDays;
@@ -129,6 +160,7 @@ export function createWorld(resolved: ResolvedScenario, options: CreateWorldOpti
         stock: Math.floor((stockCap * (spec.stockPct ?? 100)) / 100),
         stockCap,
         supplyPerTick,
+        speed: t.speedKmPerDay,
       };
     }
     formations[spec.id] = {
@@ -136,6 +168,7 @@ export function createWorld(resolved: ResolvedScenario, options: CreateWorldOpti
       name: spec.name,
       nation: spec.nation,
       echelon: spec.echelon,
+      branch,
       parentId: spec.parent ?? null,
       childIds: [],
       position: { ...spec.position },
@@ -143,6 +176,8 @@ export function createWorld(resolved: ResolvedScenario, options: CreateWorldOpti
       aggregated: false,
       stats,
       baseline: null,
+      baselinePosition: null,
+      order: null,
     };
   }
   for (const id of sortedIds(formations)) {
@@ -189,6 +224,15 @@ export function createWorld(resolved: ResolvedScenario, options: CreateWorldOpti
     // Array.prototype.sort is stable, so same-tick events keep file order.
     schedule: scenario.events.map(eventToCommand).sort((a, b) => a.tick - b.tick),
     rules: { ...DEFAULT_RULES, ...options.rules },
+    terrain: map
+      ? {
+          cellKm: map.terrain.cellKm,
+          cols: map.terrain.cols,
+          rows: map.terrain.rows,
+          cells: map.terrain.cells,
+          speeds: Object.fromEntries(map.terrain.classes.map((c) => [c.code, c.speed])),
+        }
+      : null,
   };
 
   // Collapse deepest first so no node is aggregated beneath an already-aggregated ancestor.

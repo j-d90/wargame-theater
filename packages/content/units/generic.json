@@ -1,0 +1,46 @@
+[
+  {
+    "id": "generic-armored-division",
+    "name": "Armored Division (generic)",
+    "echelon": "division",
+    "branch": "armor",
+    "strength": 1500,
+    "supplyPerTick": 16,
+    "stockDays": 3,
+    "speedKmPerDay": 70,
+    "source": "Abstract game values, not historical."
+  },
+  {
+    "id": "generic-mech-division",
+    "name": "Mechanized Division (generic)",
+    "echelon": "division",
+    "branch": "mechanized",
+    "strength": 1400,
+    "supplyPerTick": 14,
+    "stockDays": 3,
+    "speedKmPerDay": 60,
+    "source": "Abstract game values, not historical."
+  },
+  {
+    "id": "generic-infantry-division",
+    "name": "Infantry Division (generic)",
+    "echelon": "division",
+    "branch": "infantry",
+    "strength": 1200,
+    "supplyPerTick": 9,
+    "stockDays": 4,
+    "speedKmPerDay": 30,
+    "source": "Abstract game values, not historical."
+  },
+  {
+    "id": "generic-armored-brigade",
+    "name": "Armored Brigade (generic)",
+    "echelon": "brigade",
+    "branch": "armor",
+    "strength": 500,
+    "supplyPerTick": 5,
+    "stockDays": 3,
+    "speedKmPerDay": 70,
+    "source": "Abstract game values, not historical."
+  }
+]

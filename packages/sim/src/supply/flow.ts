@@ -9,6 +9,19 @@ import { distribute } from '../core/distribute.ts';
 import { rngStream, sortedIds, type Formation, type SupplyLink, type WorldState } from '../core/world.ts';
 import { nextInt } from '../core/rng.ts';
 import { activeFormations, effectiveSupplyNode } from '../command/formations.ts';
+import { distanceKm } from '../command/movement.ts';
+
+/** Distance from a formation to the node it draws from, or null if it has none. */
+export function supplyDistance(world: WorldState, f: Formation): number | null {
+  const nodeId = effectiveSupplyNode(world, f.id);
+  const node = nodeId === null ? undefined : world.supply.nodes[nodeId];
+  return node ? distanceKm(f.position, node.position) : null;
+}
+
+export function inSupplyRange(world: WorldState, f: Formation): boolean {
+  const d = supplyDistance(world, f);
+  return d !== null && d <= world.rules.supplyRangeKm;
+}
 
 /** Daily roll of each link's throughput: up to `variance` permille lost. */
 export function rollLinkEfficiency(world: WorldState): void {
@@ -33,11 +46,11 @@ export function supplyPhase(world: WorldState): void {
     if (!n.disrupted && n.productionPerTick > 0) n.stock = Math.min(n.capacity, n.stock + n.productionPerTick);
   }
 
-  // Issue to formations.
+  // Issue to formations within range of their node.
   const drawers = new Map<string, Formation[]>();
   for (const f of activeFormations(world)) {
     const nodeId = effectiveSupplyNode(world, f.id);
-    if (nodeId === null) continue;
+    if (nodeId === null || !inSupplyRange(world, f)) continue;
     const list = drawers.get(nodeId) ?? [];
     list.push(f);
     drawers.set(nodeId, list);

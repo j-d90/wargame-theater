@@ -17,6 +17,8 @@ export interface Rules {
   moraleRecovery: number;
   /** Below this readiness, mobility starts dropping (derived stat). */
   mobilityReadinessThreshold: number;
+  /** Formations farther than this from their supply node receive nothing, km. */
+  supplyRangeKm: number;
 }
 
 export const DEFAULT_RULES: Readonly<Rules> = {
@@ -28,4 +30,5 @@ export const DEFAULT_RULES: Readonly<Rules> = {
   moraleRecoveryThreshold: 500,
   moraleRecovery: 1,
   mobilityReadinessThreshold: 600,
+  supplyRangeKm: 150,
 };

@@ -1,0 +1,42 @@
+{
+  "id": "gulf-sandbox",
+  "name": "Gulf Sandbox",
+  "description": "Generic coalition corps in northern Saudi Arabia on the real theater map, fed from a Gulf port through three depots. For trying movement and supply; there is no enemy until M3.",
+  "seed": 1990,
+  "days": 43,
+  "map": "gulf",
+  "nations": ["coalition-sandbox"],
+  "formations": [
+    { "id": "coalition", "name": "Coalition", "nation": "coalition-sandbox", "echelon": "nation", "position": { "lat": 27.0, "lon": 46.5 }, "supplyNode": "log-base-hafar" },
+    { "id": "theater-command", "name": "Theater Command", "nation": "coalition-sandbox", "echelon": "theater", "parent": "coalition", "position": { "lat": 27.5, "lon": 46.0 } },
+
+    { "id": "corps-west", "name": "West Corps", "nation": "coalition-sandbox", "echelon": "corps", "parent": "theater-command", "position": { "lat": 29.3, "lon": 44.0 }, "supplyNode": "fwd-depot-rafha" },
+    { "id": "div-w1", "name": "1st Armored Div", "nation": "coalition-sandbox", "echelon": "division", "parent": "corps-west", "template": "generic-armored-division", "position": { "lat": 29.4, "lon": 43.8 } },
+    { "id": "div-w2", "name": "2nd Mech Div", "nation": "coalition-sandbox", "echelon": "division", "parent": "corps-west", "template": "generic-mech-division", "position": { "lat": 29.2, "lon": 44.3 } },
+
+    { "id": "corps-center", "name": "Center Corps", "nation": "coalition-sandbox", "echelon": "corps", "parent": "theater-command", "position": { "lat": 28.5, "lon": 46.0 }, "supplyNode": "log-base-hafar" },
+    { "id": "div-c1", "name": "3rd Armored Div", "nation": "coalition-sandbox", "echelon": "division", "parent": "corps-center", "position": { "lat": 28.6, "lon": 45.8 }, "aggregated": true },
+    { "id": "bde-c1-1", "name": "1st Bde, 3rd Armd", "nation": "coalition-sandbox", "echelon": "brigade", "parent": "div-c1", "template": "generic-armored-brigade", "position": { "lat": 28.68, "lon": 45.62 } },
+    { "id": "bde-c1-2", "name": "2nd Bde, 3rd Armd", "nation": "coalition-sandbox", "echelon": "brigade", "parent": "div-c1", "template": "generic-armored-brigade", "position": { "lat": 28.55, "lon": 45.80 } },
+    { "id": "bde-c1-3", "name": "3rd Bde, 3rd Armd", "nation": "coalition-sandbox", "echelon": "brigade", "parent": "div-c1", "template": "generic-armored-brigade", "position": { "lat": 28.70, "lon": 45.95 }, "strengthPct": 85 },
+    { "id": "div-c2", "name": "4th Infantry Div", "nation": "coalition-sandbox", "echelon": "division", "parent": "corps-center", "template": "generic-infantry-division", "position": { "lat": 28.3, "lon": 46.3 } },
+
+    { "id": "corps-east", "name": "East Corps", "nation": "coalition-sandbox", "echelon": "corps", "parent": "theater-command", "position": { "lat": 28.0, "lon": 47.8 }, "supplyNode": "fwd-depot-khafji" },
+    { "id": "div-e1", "name": "5th Infantry Div", "nation": "coalition-sandbox", "echelon": "division", "parent": "corps-east", "template": "generic-infantry-division", "position": { "lat": 28.1, "lon": 48.0 } },
+    { "id": "div-e2", "name": "6th Mech Div", "nation": "coalition-sandbox", "echelon": "division", "parent": "corps-east", "template": "generic-mech-division", "position": { "lat": 27.9, "lon": 47.6 } }
+  ],
+  "supply": {
+    "nodes": [
+      { "id": "dammam-port", "name": "Dammam Port", "kind": "source", "position": { "lat": 26.43, "lon": 50.05 }, "capacity": 50000, "stock": 20000, "productionPerTick": 250 },
+      { "id": "log-base-hafar", "name": "Hafar al-Batin Log Base", "kind": "depot", "position": { "lat": 28.43, "lon": 45.96 }, "capacity": 8000, "stock": 5000 },
+      { "id": "fwd-depot-rafha", "name": "Rafha Forward Depot", "kind": "depot", "position": { "lat": 29.62, "lon": 43.49 }, "capacity": 3000, "stock": 2000 },
+      { "id": "fwd-depot-khafji", "name": "Khafji Forward Depot", "kind": "depot", "position": { "lat": 28.25, "lon": 48.2 }, "capacity": 3000, "stock": 2000 }
+    ],
+    "links": [
+      { "id": "road-dammam-hafar", "from": "dammam-port", "to": "log-base-hafar", "mode": "road", "capacityPerTick": 120, "variance": 100, "vulnerability": 0.3 },
+      { "id": "road-hafar-rafha", "from": "log-base-hafar", "to": "fwd-depot-rafha", "mode": "road", "capacityPerTick": 60, "variance": 150, "vulnerability": 0.5 },
+      { "id": "road-coastal-khafji", "from": "dammam-port", "to": "fwd-depot-khafji", "mode": "road", "capacityPerTick": 60, "variance": 120, "vulnerability": 0.5 }
+    ]
+  },
+  "events": []
+}

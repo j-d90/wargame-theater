@@ -19,8 +19,59 @@ export const EchelonSchema = z.enum([
 ]);
 export type Echelon = z.infer<typeof EchelonSchema>;
 
-export const PositionSchema = z.object({ x: z.number(), y: z.number() });
-export type Position = z.infer<typeof PositionSchema>;
+/** Map kilometres (see projection.ts). */
+export const XYSchema = z.object({ x: z.number(), y: z.number() });
+export type Position = z.infer<typeof XYSchema>;
+/** Scenarios may place things in km or, on scenarios with a map, by latitude/longitude. */
+export const PositionSchema = z.union([XYSchema, z.object({ lat: z.number().min(-90).max(90), lon: z.number().min(-180).max(180) })]);
+export type PositionInput = z.infer<typeof PositionSchema>;
+
+export const MapFrameSchema = z.object({
+  west: z.number(),
+  east: z.number(),
+  south: z.number(),
+  north: z.number(),
+  kmPerDegLon: z.number().positive(),
+  kmPerDegLat: z.number().positive(),
+});
+
+export const TerrainClassSchema = z.object({
+  code: z.string().length(1),
+  name: z.string().min(1),
+  /** Movement speed factor, permille of full speed. 0 means impassable. */
+  speed: permille,
+});
+export type TerrainClass = z.infer<typeof TerrainClassSchema>;
+
+export const GameMapSchema = z
+  .object({
+    id,
+    name: z.string().min(1),
+    sources: z.array(z.string()).min(1),
+    frame: MapFrameSchema,
+    widthKm: z.number().positive(),
+    heightKm: z.number().positive(),
+    terrain: z.object({
+      cellKm: z.number().positive(),
+      cols: z.number().int().positive(),
+      rows: z.number().int().positive(),
+      classes: z.array(TerrainClassSchema).min(1),
+      /** One class code per cell, row by row from the north-west corner. */
+      cells: z.string(),
+    }),
+  })
+  .superRefine((m, ctx) => {
+    const t = m.terrain;
+    if (t.cells.length !== t.cols * t.rows) {
+      ctx.addIssue({ code: 'custom', path: ['terrain', 'cells'], message: `expected ${t.cols * t.rows} cells, got ${t.cells.length}` });
+    }
+    const codes = new Set(t.classes.map((c) => c.code));
+    const unknown = [...new Set(t.cells)].filter((c) => !codes.has(c));
+    if (unknown.length > 0) {
+      ctx.addIssue({ code: 'custom', path: ['terrain', 'cells'], message: `unknown terrain codes ${unknown.join(', ')}` });
+    }
+  });
+export type GameMap = z.infer<typeof GameMapSchema>;
 
 export const UnitTemplateSchema = z.object({
   id,
@@ -32,6 +83,10 @@ export const UnitTemplateSchema = z.object({
   supplyPerTick: z.number().int().positive(),
   /** Days of supply the formation carries with it. */
   stockDays: z.number().int().positive(),
+  /** Unit type, used for map symbols. */
+  branch: z.enum(['armor', 'mechanized', 'infantry', 'artillery', 'support']).optional(),
+  /** Road-march speed in open terrain at full readiness, km per day. */
+  speedKmPerDay: z.number().int().positive().default(40),
   source: z.string().optional(),
 });
 export type UnitTemplate = z.infer<typeof UnitTemplateSchema>;
@@ -103,6 +158,7 @@ const At = { day: nonNegInt, hour: z.number().int().min(0).max(23).optional() };
 export const ScenarioEventSchema = z.discriminatedUnion('type', [
   z.object({ ...At, type: z.literal('expand'), formation: id }),
   z.object({ ...At, type: z.literal('aggregate'), formation: id }),
+  z.object({ ...At, type: z.literal('move'), formation: id, to: PositionSchema }),
   z.object({
     ...At,
     type: z.literal('setDisrupted'),
@@ -118,6 +174,8 @@ export const ScenarioSchema = z.object({
   description: z.string().optional(),
   seed: z.number().int(),
   days: z.number().int().positive(),
+  /** Map id from the catalog. Without one the world is open, flat ground. */
+  map: id.optional(),
   nations: z.array(id).min(1),
   formations: z.array(FormationSpecSchema).min(1),
   supply: z.object({

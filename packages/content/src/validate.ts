@@ -1,15 +1,49 @@
 import { defaultCatalog, scenarioFiles, type Catalog } from './catalog.ts';
-import { ScenarioSchema, type Nation, type Scenario, type UnitTemplate } from './schemas.ts';
+import { latLonToXY } from './projection.ts';
+import {
+  ScenarioSchema,
+  type FormationSpec,
+  type GameMap,
+  type Nation,
+  type Position,
+  type PositionInput,
+  type Scenario,
+  type ScenarioEvent,
+  type SupplyLinkSpec,
+  type SupplyNodeSpec,
+  type UnitTemplate,
+} from './schemas.ts';
+
+// A resolved scenario has every position converted to map km.
+type MoveEvent = Extract<ScenarioEvent, { type: 'move' }>;
+export type ResolvedFormationSpec = Omit<FormationSpec, 'position'> & { position: Position };
+export type ResolvedSupplyNodeSpec = Omit<SupplyNodeSpec, 'position'> & { position: Position };
+export type ResolvedEvent = Exclude<ScenarioEvent, MoveEvent> | (Omit<MoveEvent, 'to'> & { to: Position });
+export interface ResolvedScenarioData extends Omit<Scenario, 'formations' | 'supply' | 'events'> {
+  formations: ResolvedFormationSpec[];
+  supply: { nodes: ResolvedSupplyNodeSpec[]; links: SupplyLinkSpec[] };
+  events: ResolvedEvent[];
+}
 
 export interface ResolvedScenario {
-  scenario: Scenario;
+  scenario: ResolvedScenarioData;
   units: ReadonlyMap<string, UnitTemplate>;
   nations: ReadonlyMap<string, Nation>;
+  map: GameMap | null;
 }
 
 export type ValidationResult =
   | { ok: true; value: ResolvedScenario }
   | { ok: false; errors: string[] };
+
+/** Terrain class code at a map position, or undefined off the map. */
+export function terrainCodeAt(map: GameMap, p: Position): string | undefined {
+  const t = map.terrain;
+  const c = Math.floor(p.x / t.cellKm);
+  const r = Math.floor(p.y / t.cellKm);
+  if (c < 0 || r < 0 || c >= t.cols || r >= t.rows) return undefined;
+  return t.cells[r * t.cols + c];
+}
 
 /** Schema validation plus the cross-references Zod can't express. */
 export function validateScenario(raw: unknown, catalog: Catalog = defaultCatalog): ValidationResult {
@@ -22,6 +56,31 @@ export function validateScenario(raw: unknown, catalog: Catalog = defaultCatalog
   }
   const s = parsed.data;
   const errors: string[] = [];
+
+  let map: GameMap | null = null;
+  if (s.map !== undefined) {
+    map = catalog.maps.get(s.map) ?? null;
+    if (!map) errors.push(`map "${s.map}" is not in the catalog`);
+  }
+  const impassable = new Set(map?.terrain.classes.filter((c) => c.speed === 0).map((c) => c.code));
+  const resolvePos = (p: PositionInput, where: string, mustBePassable: boolean): Position => {
+    let xy: Position;
+    if ('lat' in p) {
+      if (!map) {
+        errors.push(`${where}: lat/lon positions need a scenario map`);
+        return { x: 0, y: 0 };
+      }
+      xy = latLonToXY(map.frame, p.lat, p.lon);
+    } else {
+      xy = { x: p.x, y: p.y };
+    }
+    if (map) {
+      const code = terrainCodeAt(map, xy);
+      if (code === undefined) errors.push(`${where}: position is off the map`);
+      else if (mustBePassable && impassable.has(code)) errors.push(`${where}: position is on impassable terrain`);
+    }
+    return xy;
+  };
 
   const dupes = (kind: string, ids: string[]) => {
     const seen = new Set<string>();
@@ -41,6 +100,7 @@ export function validateScenario(raw: unknown, catalog: Catalog = defaultCatalog
 
   const byId = new Map(s.formations.map((f) => [f.id, f]));
   const hasChildren = new Set(s.formations.flatMap((f) => (f.parent ? [f.parent] : [])));
+  const formations: ResolvedFormationSpec[] = [];
   for (const f of s.formations) {
     const where = `formation "${f.id}"`;
     if (!s.nations.includes(f.nation)) errors.push(`${where}: nation "${f.nation}" is not listed in scenario nations`);
@@ -68,11 +128,15 @@ export function validateScenario(raw: unknown, catalog: Catalog = defaultCatalog
       cur = cur.parent === undefined ? undefined : byId.get(cur.parent);
     }
     if (leaf && !supplied) errors.push(`${where}: no supplyNode on it or any ancestor`);
+    formations.push({ ...f, position: resolvePos(f.position, where, leaf) });
   }
 
+  const nodes: ResolvedSupplyNodeSpec[] = [];
   for (const n of s.supply.nodes) {
-    if (n.kind === 'depot' && n.productionPerTick !== undefined) errors.push(`supply node "${n.id}": only sources produce`);
-    if ((n.stock ?? 0) > n.capacity) errors.push(`supply node "${n.id}": stock exceeds capacity`);
+    const where = `supply node "${n.id}"`;
+    if (n.kind === 'depot' && n.productionPerTick !== undefined) errors.push(`${where}: only sources produce`);
+    if ((n.stock ?? 0) > n.capacity) errors.push(`${where}: stock exceeds capacity`);
+    nodes.push({ ...n, position: resolvePos(n.position, where, false) });
   }
   for (const l of s.supply.links) {
     if (!nodeIds.has(l.from)) errors.push(`supply link "${l.id}": from "${l.from}" does not exist`);
@@ -80,19 +144,34 @@ export function validateScenario(raw: unknown, catalog: Catalog = defaultCatalog
     if (l.from === l.to) errors.push(`supply link "${l.id}": links a node to itself`);
   }
 
-  s.events.forEach((e, i) => {
+  const events: ResolvedEvent[] = s.events.map((e, i) => {
     const where = `events.${i}`;
     if (e.day >= s.days) errors.push(`${where}: day ${e.day} is past the scenario end (${s.days} days)`);
-    if (e.type === 'setDisrupted') {
-      const ids = e.target.kind === 'node' ? nodeIds : linkIds;
-      if (!ids.has(e.target.id)) errors.push(`${where}: ${e.target.kind} "${e.target.id}" does not exist`);
-    } else if (!hasChildren.has(e.formation)) {
-      errors.push(`${where}: "${e.formation}" is not a formation with children`);
+    switch (e.type) {
+      case 'setDisrupted': {
+        const ids = e.target.kind === 'node' ? nodeIds : linkIds;
+        if (!ids.has(e.target.id)) errors.push(`${where}: ${e.target.kind} "${e.target.id}" does not exist`);
+        return e;
+      }
+      case 'move':
+        if (!formationIds.has(e.formation)) errors.push(`${where}: formation "${e.formation}" does not exist`);
+        return { ...e, to: resolvePos(e.to, where, true) };
+      default:
+        if (!hasChildren.has(e.formation)) errors.push(`${where}: "${e.formation}" is not a formation with children`);
+        return e;
     }
   });
 
   if (errors.length > 0) return { ok: false, errors };
-  return { ok: true, value: { scenario: s, units: catalog.units, nations: catalog.nations } };
+  return {
+    ok: true,
+    value: {
+      scenario: { ...s, formations, supply: { nodes, links: s.supply.links }, events },
+      units: catalog.units,
+      nations: catalog.nations,
+      map,
+    },
+  };
 }
 
 export function loadScenario(idOrRaw: string | unknown, catalog: Catalog = defaultCatalog): ResolvedScenario {

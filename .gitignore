@@ -7,3 +7,6 @@ coverage/
 *.log
 .env
 .env.*
+
+# Raw geodata downloads (regenerate with npm run build:map)
+tools/geo/.cache/

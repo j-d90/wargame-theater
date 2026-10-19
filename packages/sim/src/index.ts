@@ -11,3 +11,4 @@ export * from './command/formations.ts';
 export * from './command/derived.ts';
 export * from './supply/flow.ts';
 export * from './supply/consumption.ts';
+export * from './command/movement.ts';

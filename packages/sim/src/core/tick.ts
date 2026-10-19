@@ -3,6 +3,7 @@ import { TICKS_PER_DAY } from './time.ts';
 import type { WorldState } from './world.ts';
 import { rollLinkEfficiency, supplyPhase } from '../supply/flow.ts';
 import { consumptionPhase } from '../supply/consumption.ts';
+import { movementPhase } from '../command/movement.ts';
 
 /**
  * Advance the world by one fixed tick (15 minutes of game time). Mutates `world`.
@@ -15,6 +16,7 @@ export function step(world: WorldState, commands: readonly Command[] = []): void
   for (const cmd of commands) applyCommand(world, cmd);
 
   if (world.tick % TICKS_PER_DAY === 0) rollLinkEfficiency(world);
+  movementPhase(world);
   supplyPhase(world);
   consumptionPhase(world);
 
