@@ -12,3 +12,8 @@ export * from './command/derived.ts';
 export * from './supply/flow.ts';
 export * from './supply/consumption.ts';
 export * from './command/movement.ts';
+export * from './combat/aggregate.ts';
+export * from './combat/air.ts';
+export * from './combat/objectives.ts';
+export * from './supply/depots.ts';
+export * from './ai/theater.ts';

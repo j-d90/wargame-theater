@@ -39,13 +39,13 @@ const SOURCES = [
   'Elevation: AWS Terrain Tiles (terrarium), derived from SRTM, GMTED2010, ETOPO1 and others; see github.com/tilezen/joerd/blob/master/docs/attribution.md',
 ];
 
-// Terrain classes. Speeds are abstract game factors (permille of open-ground speed).
+// Terrain classes. Speed and defense are abstract game factors in permille.
 const CLASSES = [
-  { code: '.', name: 'open', speed: 1000 },
-  { code: '^', name: 'rough', speed: 600 },
-  { code: 'M', name: 'mountain', speed: 250 },
-  { code: 'u', name: 'urban', speed: 700 },
-  { code: '~', name: 'water', speed: 0 },
+  { code: '.', name: 'open', speed: 1000, defense: 1000 },
+  { code: '^', name: 'rough', speed: 600, defense: 1300 },
+  { code: 'M', name: 'mountain', speed: 250, defense: 1700 },
+  { code: 'u', name: 'urban', speed: 700, defense: 1500 },
+  { code: '~', name: 'water', speed: 0, defense: 1000 },
 ];
 
 // ---------------------------------------------------------------- downloads

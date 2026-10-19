@@ -33,7 +33,7 @@ export function rollLinkEfficiency(world: WorldState): void {
 }
 
 export function linkThroughput(link: SupplyLink): number {
-  return Math.floor((link.capacityPerTick * link.efficiency) / 1000);
+  return Math.floor((link.capacityPerTick * link.efficiency * (1000 - link.damage)) / 1_000_000);
 }
 
 export function supplyPhase(world: WorldState): void {

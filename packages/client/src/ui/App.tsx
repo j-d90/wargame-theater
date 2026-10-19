@@ -23,9 +23,13 @@ function useKeyboard() {
   useEffect(() => {
     let lastSpeed: SpeedSetting = 1;
     const onKey = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.metaKey || e.ctrlKey) return;
-      const { speed, selection, mode, summary } = store.get();
-      const formation = selection?.kind === 'formation' ? selection.id : null;
+      // Shortcuts work everywhere except while typing in a text field.
+      const typing = e.target instanceof HTMLInputElement && !['checkbox', 'range', 'radio', 'button'].includes(e.target.type);
+      if (typing || e.target instanceof HTMLTextAreaElement || e.metaKey || e.ctrlKey) return;
+      const { speed, selection, mode, summary, playerSide } = store.get();
+      const selected = selection?.kind === 'formation' ? summary?.active.find((f) => f.id === selection.id) : undefined;
+      // Order shortcuts only apply to your own formations.
+      const formation = selected && (playerSide === null || selected.side === playerSide) ? selected.id : null;
       if (e.key === ' ') {
         e.preventDefault();
         if (speed === 0) sim.setSpeed(lastSpeed);

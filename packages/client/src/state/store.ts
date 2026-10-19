@@ -15,6 +15,8 @@ export interface Message {
 export interface AppState {
   scenario: ScenarioInfo | null;
   summary: WorldSummary | null;
+  /** The side the player commands; null when there is only one side or none chosen. */
+  playerSide: string | null;
   speed: SpeedSetting;
   selection: Selection | null;
   mode: Mode;
@@ -46,6 +48,7 @@ export function createStore<T>(initial: T) {
 export const store = createStore<AppState>({
   scenario: null,
   summary: null,
+  playerSide: null,
   speed: 0,
   selection: null,
   mode: 'select',

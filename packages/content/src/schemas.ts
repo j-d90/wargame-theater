@@ -40,6 +40,8 @@ export const TerrainClassSchema = z.object({
   name: z.string().min(1),
   /** Movement speed factor, permille of full speed. 0 means impassable. */
   speed: permille,
+  /** Defender's protection multiplier, permille (1000 = no bonus). */
+  defense: z.number().int().min(500).max(3000).default(1000),
 });
 export type TerrainClass = z.infer<typeof TerrainClassSchema>;
 
@@ -87,6 +89,8 @@ export const UnitTemplateSchema = z.object({
   branch: z.enum(['armor', 'mechanized', 'infantry', 'artillery', 'support']).optional(),
   /** Road-march speed in open terrain at full readiness, km per day. */
   speedKmPerDay: z.number().int().positive().default(40),
+  /** Abstract fighting quality (training, equipment, doctrine), permille of a baseline unit. */
+  quality: z.number().int().positive().default(1000),
   source: z.string().optional(),
 });
 export type UnitTemplate = z.infer<typeof UnitTemplateSchema>;
@@ -125,6 +129,8 @@ export const FormationSpecSchema = z.object({
   readiness: permille.optional(),
   morale: permille.optional(),
   stockPct: z.number().int().min(0).max(100).optional(),
+  /** Prepared defences at the start, permille extra protection. */
+  fortification: z.number().int().min(0).max(2000).optional(),
 });
 export type FormationSpec = z.infer<typeof FormationSpecSchema>;
 
@@ -137,6 +143,11 @@ export const SupplyNodeSpecSchema = z.object({
   stock: nonNegInt.optional(),
   /** Supply units produced per tick; sources only. */
   productionPerTick: nonNegInt.optional(),
+  /** Owning side; required when a scenario has more than one side. */
+  side: id.optional(),
+  /** Mobile depots can be moved forward behind advancing forces. */
+  mobile: z.boolean().optional(),
+  speedKmPerDay: z.number().int().positive().optional(),
 });
 export type SupplyNodeSpec = z.infer<typeof SupplyNodeSpecSchema>;
 
@@ -168,6 +179,79 @@ export const ScenarioEventSchema = z.discriminatedUnion('type', [
 ]);
 export type ScenarioEvent = z.infer<typeof ScenarioEventSchema>;
 
+export const ObjectiveSpecSchema = z.object({
+  id,
+  name: z.string().min(1),
+  position: PositionSchema,
+  /** Side holding it at the start. */
+  holder: id.optional(),
+  /** A side holds the objective when only its formations are within this radius. */
+  radiusKm: z.number().positive().default(20),
+  points: z.number().int().nonnegative().default(10),
+});
+export type ObjectiveSpec = z.infer<typeof ObjectiveSpecSchema>;
+
+export const AirSpecSchema = z.object({
+  /** Abstract daily air effort at full strength. */
+  sortiesPerDay: z.number().int().nonnegative(),
+  /** Abstract air quality, permille of baseline. */
+  quality: z.number().int().positive().default(1000),
+});
+export type AirSpec = z.infer<typeof AirSpecSchema>;
+
+export const OffensivePlanSchema = z.object({
+  /** The command whose subordinates carry out this plan. */
+  corps: id,
+  /** Where its divisions gather before the offensive. */
+  assembly: PositionSchema,
+  /** Objectives to take, in order. */
+  objectives: z.array(id).min(1),
+  /** Mobile depot that follows this command forward. */
+  depot: id.optional(),
+});
+export type OffensivePlan = z.infer<typeof OffensivePlanSchema>;
+
+export const AiSpecSchema = z.object({
+  posture: z.enum(['offensive', 'defensive']),
+  /** 0..1000. Lower competence decides less often and reacts to less. */
+  competence: permille.default(700),
+  offensive: z
+    .object({
+      /** The ground offensive starts no earlier than this day... */
+      earliestDay: nonNegInt,
+      /** ...and no later than this one... */
+      latestDay: nonNegInt,
+      /** ...or as soon as enemy combat power falls below this share of its start (permille). */
+      launchWhenEnemyBelow: permille,
+      plans: z.array(OffensivePlanSchema).min(1),
+    })
+    .optional(),
+  defensive: z
+    .object({
+      /** Commands whose subordinates counterattack nearby threats. */
+      reserves: z.array(id).default([]),
+      reactionKm: z.number().positive().default(80),
+      /** Withdraw everything toward `withdrawTo` once own combat power falls below this share (permille)... */
+      withdrawBelow: permille,
+      /** ...or once the enemy holds any of these objectives. */
+      withdrawWhenLost: z.array(id).default([]),
+      withdrawTo: PositionSchema,
+    })
+    .optional(),
+});
+export type AiSpec = z.infer<typeof AiSpecSchema>;
+
+export const SideSpecSchema = z.object({
+  id,
+  name: z.string().min(1),
+  /** Map colour as #rrggbb. */
+  color: z.string().regex(/^#[0-9a-f]{6}$/i).optional(),
+  nations: z.array(id).min(1),
+  air: AirSpecSchema.optional(),
+  ai: AiSpecSchema.optional(),
+});
+export type SideSpec = z.infer<typeof SideSpecSchema>;
+
 export const ScenarioSchema = z.object({
   id,
   name: z.string().min(1),
@@ -176,6 +260,11 @@ export const ScenarioSchema = z.object({
   days: z.number().int().positive(),
   /** Map id from the catalog. Without one the world is open, flat ground. */
   map: id.optional(),
+  /** Calendar date of day 0, YYYY-MM-DD, for display. */
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  /** Opposing sides. Without them every nation is on one side and nothing fights. */
+  sides: z.array(SideSpecSchema).optional(),
+  objectives: z.array(ObjectiveSpecSchema).default([]),
   nations: z.array(id).min(1),
   formations: z.array(FormationSpecSchema).min(1),
   supply: z.object({

@@ -1,7 +1,7 @@
 import type { SpeedSetting } from '../worker/protocol.ts';
 import { sim } from '../state/sim.ts';
 import { useApp } from '../state/store.ts';
-import { clock } from './format.ts';
+import { calendarDate, clock } from './format.ts';
 
 const SPEED_BUTTONS: { speed: SpeedSetting; label: string; title: string }[] = [
   { speed: 0, label: '❚❚', title: 'Pause (Space)' },
@@ -15,7 +15,9 @@ export function TopBar() {
   const days = useApp((s) => s.scenario?.days ?? 0);
   const tick = useApp((s) => s.summary?.tick ?? 0);
   const speed = useApp((s) => s.speed);
+  const startDate = useApp((s) => s.summary?.startDate ?? null);
   const { day, time } = clock(tick);
+  const date = calendarDate(startDate, day);
 
   return (
     <header className="topbar">
@@ -24,7 +26,8 @@ export function TopBar() {
         <span className="scenario">{name}</span>
       </div>
       <div className="clock" aria-live="off">
-        <span className="day">Day {day}</span>
+        <span className="day">{date ?? `Day ${day}`}</span>
+        {date && <span className="of">day {day}</span>}
         <span className="time">{time}</span>
         <span className="of">of {days}</span>
       </div>

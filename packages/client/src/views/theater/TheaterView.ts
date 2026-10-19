@@ -149,6 +149,8 @@ export class TheaterView {
   private summary: WorldSummary | null = null;
   private selection: Selection | null = null;
   private mode: Mode = 'select';
+  private playerSide: string | null = null;
+  private sideColors = new Map<string, number>();
   private cursor: Pt | null = null;
   private pointers = new Map<number, Pt>();
   private dragged = false;
@@ -195,6 +197,13 @@ export class TheaterView {
     this.app.stage.addChild(this.world);
     host.appendChild(this.app.canvas);
     this.canvas = this.app.canvas;
+    // resizeTo only follows the window; also follow layout changes beside the map.
+    const observer = new ResizeObserver(() => {
+      this.app.resize();
+      this.dirty = true;
+    });
+    observer.observe(host);
+    this.cleanup.push(() => observer.disconnect());
     this.bindInput(this.app.canvas);
     this.app.ticker.add(() => this.render());
   }
@@ -205,8 +214,10 @@ export class TheaterView {
     if (this.canvas) this.app.destroy(true, { children: true });
   }
 
-  setState(summary: WorldSummary | null, selection: Selection | null, mode: Mode) {
+  setState(summary: WorldSummary | null, selection: Selection | null, mode: Mode, playerSide: string | null = null) {
     this.summary = summary;
+    this.playerSide = playerSide;
+    if (summary) for (const s of summary.sides) this.sideColors.set(s.id, parseInt(s.color.slice(1), 16));
     this.selection = selection;
     this.mode = mode;
     if (this.canvas) this.canvas.style.cursor = mode === 'move' ? 'crosshair' : 'default';
@@ -318,6 +329,8 @@ export class TheaterView {
     const geo = this.assets.geo;
     this.cityLabels.begin();
     if (geo) {
+      // Outline the edge of the map data so the empty area beyond reads as "off the map".
+      g.rect(0, 0, geo.widthKm, geo.heightKm).stroke({ width: 1.5 * s, color: 0x5a6470 });
       for (const line of geo.lakes) polyline(g, line).stroke({ width: 1 * s, color: COLORS.coast, alpha: 0.9 });
       for (const r of geo.rivers) polyline(g, r.line).stroke({ width: 1.4 * s, color: COLORS.river, alpha: 0.85 });
       for (const line of geo.coast) polyline(g, line).stroke({ width: 1.2 * s, color: COLORS.coast, alpha: 0.9 });
@@ -372,9 +385,26 @@ export class TheaterView {
       g.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({ width: width + 2.5 * s, color: COLORS.linkCasing, alpha: 0.75 });
       if (l.disrupted) {
         dashed(g, a, b, 10 * s, 7 * s).stroke({ width, color: COLORS.linkCut });
+      } else if (l.damage >= 300) {
+        // Badly damaged by air interdiction: amber, dashed when mostly wrecked.
+        if (l.damage >= 700) dashed(g, a, b, 6 * s, 4 * s).stroke({ width, color: COLORS.damaged });
+        else g.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({ width, color: COLORS.damaged, alpha: 0.9 });
       } else {
         const util = l.capacity > 0 ? l.flow / l.capacity : 0;
         g.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({ width, color: util > 0 ? COLORS.link : COLORS.linkIdle, alpha: 0.7 + 0.3 * Math.min(1, util * 1.5) });
+      }
+    }
+
+    // Objectives: a diamond in the holder's colour.
+    for (const o of sum.objectives) {
+      const r = 8 * s;
+      const holder = (o.holder && this.sideColors.get(o.holder)) || 0x999999;
+      const { x, y } = o.position;
+      g.poly([x, y - r, x + r, y, x, y + r, x - r, y], true).fill({ color: holder }).stroke({ width: 2 * s, color: 0xffffff });
+      g.circle(x, y, o.radiusKm).stroke({ width: 1 * s, color: holder, alpha: 0.35 });
+      const ly = y - r - 2 * s;
+      if (this.cam.scale >= 0.7 && this.occupancy.claim(labelRect(o.name, 11, x, ly, 1, s, o.id))) {
+        this.supplyLabels.place(`obj:${o.id}`, o.name, x, ly, this.cam.scale, { size: 11, color: 0xffffff, bold: true, anchorY: 1 });
       }
     }
 
@@ -383,9 +413,10 @@ export class TheaterView {
       const { x, y } = n.position;
       const selected = sel?.kind === 'node' && sel.id === n.id;
       if (selected) g.circle(x, y, half + 5 * s).stroke({ width: 2 * s, color: COLORS.selected });
+      if (n.moveTo) dashed(g, n.position, n.moveTo, 5 * s, 4 * s).stroke({ width: 1.5 * s, color: COLORS.node, alpha: 0.8 });
       if (n.kind === 'source') g.circle(x, y, half);
       else g.rect(x - half, y - half, 2 * half, 2 * half);
-      g.fill({ color: COLORS.node }).stroke({ width: 1.5 * s, color: COLORS.nodeEdge });
+      g.fill({ color: COLORS.node }).stroke({ width: 2 * s, color: this.sideColors.get(n.side) ?? COLORS.nodeEdge });
       // Stock gauge under the node.
       const frac = n.capacity > 0 ? n.stock / n.capacity : 0;
       g.rect(x - 9 * s, y + half + 3 * s, 18 * s, 4 * s).fill({ color: 0x101214 });
@@ -432,6 +463,14 @@ export class TheaterView {
       }
     }
 
+    // Engagements: an orange burst between formations in contact.
+    for (const e of sum.engagements) {
+      const { x, y } = e.position;
+      g.circle(x, y, 7 * s).fill({ color: COLORS.contact, alpha: 0.35 });
+      g.moveTo(x - 5 * s, y - 5 * s).lineTo(x + 5 * s, y + 5 * s).moveTo(x + 5 * s, y - 5 * s).lineTo(x - 5 * s, y + 5 * s);
+      g.stroke({ width: 2 * s, color: COLORS.contact });
+    }
+
     for (const f of sum.active) this.drawCounter(g, f, f.id === selectedId, s);
     this.unitLabels.end();
   }
@@ -442,7 +481,9 @@ export class TheaterView {
     const x = f.position.x - w / 2;
     const y = f.position.y - h / 2;
     if (selected) g.rect(x - 3 * s, y - 3 * s, w + 6 * s, h + 6 * s).stroke({ width: 2.5 * s, color: COLORS.selected });
-    g.rect(x, y, w, h).fill({ color: COLORS.friendly }).stroke({ width: 1.2 * s, color: COLORS.friendlyLine });
+    else if (f.inContact) g.rect(x - 2 * s, y - 2 * s, w + 4 * s, h + 4 * s).stroke({ width: 2 * s, color: COLORS.contact });
+    const fill = this.sideColors.get(f.side) ?? COLORS.friendly;
+    g.rect(x, y, w, h).fill({ color: fill, alpha: f.status === 'retreating' ? 0.55 : 1 }).stroke({ width: 1.2 * s, color: COLORS.friendlyLine });
 
     // Branch symbol: armor = oval, infantry = cross, mechanized = both.
     const branch = f.branch;

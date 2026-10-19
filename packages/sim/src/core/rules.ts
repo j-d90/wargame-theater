@@ -19,6 +19,44 @@ export interface Rules {
   mobilityReadinessThreshold: number;
   /** Formations farther than this from their supply node receive nothing, km. */
   supplyRangeKm: number;
+  /** Pace of an attack relative to a road march, permille. */
+  attackPace: number;
+
+  // Combat. Calibrated against the Desert Storm scenario; see the calibration test.
+  /** Opposing formations closer than this are in contact, km. */
+  contactKm: number;
+  /** Strength lost per tick per point of effective enemy fire, before protection. */
+  lossRate: number;
+  /** Morale lost per tick when outgunned more than 1.5 to 1. */
+  outgunnedStress: number;
+  /** Fortification gained per tick while stationary, and the most digging in can reach. */
+  fortifyPerTick: number;
+  fortifyCap: number;
+  /** In contact below this morale, a formation falls back. */
+  retreatMorale: number;
+  /** A retreating formation rallies above this morale once out of contact. */
+  rallyMorale: number;
+  /** Below this morale, or this share of establishment (permille), a formation may surrender. */
+  collapseMorale: number;
+  collapseStrength: number;
+  /** Below this share of establishment (permille) a formation is destroyed. */
+  destroyedStrength: number;
+  /** Chance per tick (permille) that a collapsing formation in contact surrenders. */
+  surrenderPerTick: number;
+
+  // Air. Effort is in abstract sorties.
+  /** Enemy air pool destroyed per counter-air sortie (permille, scaled by air quality). */
+  counterAirKill: number;
+  /** Strength destroyed per effective attrition sortie (sorties x air quality x superiority). */
+  airAttritionRate: number;
+  /** Morale lost per effective attrition sortie per 1000 strength of the target. */
+  airMoraleRate: number;
+  /** Link damage (permille) per effective interdiction sortie, and repair per day. */
+  interdictionRate: number;
+  linkRepairPerDay: number;
+  /** Ground fire bonus (permille) per close-support sortie, and its cap. */
+  supportPerSortie: number;
+  supportCap: number;
 }
 
 export const DEFAULT_RULES: Readonly<Rules> = {
@@ -28,7 +66,28 @@ export const DEFAULT_RULES: Readonly<Rules> = {
   readinessRecovery: 1,
   moraleDecayEmpty: 1,
   moraleRecoveryThreshold: 500,
-  moraleRecovery: 1,
+  moraleRecovery: 0.25,
   mobilityReadinessThreshold: 600,
   supplyRangeKm: 150,
+  attackPace: 500,
+
+  contactKm: 15,
+  lossRate: 0.0006,
+  outgunnedStress: 2,
+  fortifyPerTick: 2,
+  fortifyCap: 500,
+  retreatMorale: 300,
+  rallyMorale: 450,
+  collapseMorale: 150,
+  collapseStrength: 300,
+  destroyedStrength: 80,
+  surrenderPerTick: 40,
+
+  counterAirKill: 0.06,
+  airAttritionRate: 0.1,
+  airMoraleRate: 0.3,
+  interdictionRate: 1.0,
+  linkRepairPerDay: 80,
+  supportPerSortie: 0.4,
+  supportCap: 1600,
 };

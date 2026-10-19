@@ -310,3 +310,41 @@ h3 {
     flex: 1;
   }
 }
+
+.side-tag {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+}
+.side-row {
+  margin-bottom: 10px;
+}
+.side-stats {
+  font-size: 12px;
+  color: var(--muted);
+}
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+  cursor: pointer;
+}
+.slider {
+  display: grid;
+  grid-template-columns: 110px 1fr 44px;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.slider input {
+  width: 100%;
+}
+.slider .value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

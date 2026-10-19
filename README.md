@@ -8,8 +8,9 @@ The full design is in [docs/design.md](docs/design.md). Standing rules for contr
 
 - **M1 (headless core): complete.** A deterministic tick loop, a seeded RNG, a formation tree that can collapse and expand, and a supply graph.
 - **M2 (theater map): complete.** A 2D map of Kuwait, Iraq and Saudi Arabia built from real terrain data. You can give divisions move orders (they pathfind around water and slow down in rough terrain), cut supply links and depots, and watch units downstream run out of supply.
+- **M3 (Desert Storm and theater AI): complete.** The 1991 campaign from 17 January to 28 February with division-level orders of battle for both sides, aggregate combat, abstract air power, objectives, and a theater AI for each side. Auto-resolve plays out the full campaign with plausible results; `npm run calibrate` checks this across 20 seeds.
 
-The next milestone is M3: Desert Storm orders of battle, aggregate combat, and a theater AI.
+The next milestone is M4: the strategic layer (coalition cohesion, the Scud and Israel crisis, public opinion, escalation rules).
 
 ## Getting started
 
@@ -19,13 +20,16 @@ Requires Node.js 20 or later.
 npm install
 npm test               # run all tests
 npm run typecheck      # type-check every package
-npm run sim -- tiny    # run the tiny test scenario headless
-npm run dev            # start the client at http://localhost:5173
+npm run sim -- desert-storm   # auto-resolve the campaign headless, both sides by AI
+npm run calibrate             # run 20 seeds and check the results are plausible
+npm run dev                   # start the client at http://localhost:5173
 ```
 
-The client opens the `gulf-sandbox` scenario. Add `?scenario=tiny` to the URL for the small test scenario.
+The client opens the `desert-storm` scenario with you commanding the Coalition and the AI running Iraq. Add `?scenario=gulf-sandbox` or `?scenario=tiny` to the URL for the test scenarios, or `?side=iraq` to command Iraq.
 
-### Playing the sandbox
+### Playing
+
+- **Desert Storm:** you command the Coalition's divisions and its air effort (the sliders in the side panel). Tick **AI commands the Coalition** to hand over and watch the campaign auto-resolve. Enemy units, engagements (orange bursts) and objectives (diamonds in the holder's colour) are all on the map. Fog of war comes later.
 
 - Click a unit, depot or supply line to inspect it. Drag to pan; scroll or pinch to zoom.
 - **Move:** select a unit, press **Move** (or `M`), then click a destination. `H` halts the unit.
@@ -49,8 +53,8 @@ packages/
     src/core/      tick loop, seeded RNG, world state, state hashing, commands
     src/command/   formation tree, aggregate/expand, movement and pathfinding
     src/supply/    supply flow and consumption
-    src/combat/    (later milestones)
-    src/ai/        (later milestones)
+    src/combat/    aggregate combat, abstract air power, objectives
+    src/ai/        theater AI (offensive and defensive postures)
   content/   JSON game data (units, nations, scenarios, maps) and Zod schemas
     maps/gulf/     terrain grid, map vectors and shaded relief (generated)
   client/    Vite + React + PixiJS browser app
@@ -58,6 +62,7 @@ packages/
     src/views/theater/   PixiJS theater map
     src/ui/        React panels
 tools/       Headless scenario runner
+  calibrate.ts  Desert Storm plausibility check across seeds
   geo/       Map builder (npm run build:map)
 docs/        Design document
 ```
@@ -70,6 +75,7 @@ docs/        Design document
 - **Level of detail.** A formation is either *aggregated*, simulated as one block, or *expanded*, with its children simulated individually. Expanding pushes any changes back down to the children, so state is preserved.
 - **Supply.** Supply flows from sources through depots along links that have limited capacity. Cutting a node or link starves everything downstream: readiness falls first, then morale, mobility and combat power.
 - **Content is data.** New units, nations and scenarios are JSON files validated by Zod, not code.
+- **Combat and AI.** Opposing formations in contact fight Lanchester-style: losses scale with the enemy's combat power, quality and air support, reduced by terrain and fortification. Broken units fall back, then surrender. Each side's AI works at corps level and turns intents ("take this objective") into division orders, as the design describes.
 - **Views never touch the world.** The sim runs in a Web Worker. The UI sends orders as commands and draws the snapshots that come back.
 
 ## Map data

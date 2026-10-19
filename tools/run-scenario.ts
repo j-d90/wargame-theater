@@ -1,5 +1,6 @@
-// Headless runner: npm run sim -- <scenario-id | path/to/scenario.json> [--days N] [--seed N]
-// Prints a state summary at the end of every game day.
+// Headless runner: npm run sim -- <scenario-id | path/to/scenario.json> [--days N] [--seed N] [--units]
+// Prints a state summary at the end of every game day. Scenarios with opposing
+// sides print a campaign view (both sides run by AI); --units adds every unit.
 
 import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
@@ -11,6 +12,7 @@ const { values, positionals } = parseArgs({
   options: {
     days: { type: 'string' },
     seed: { type: 'string' },
+    units: { type: 'boolean' },
   },
 });
 
@@ -33,8 +35,33 @@ if (seed !== undefined && !Number.isInteger(seed)) throw new Error(`--seed must 
 const world = createWorld(resolved, seed === undefined ? {} : { seed });
 const pct = (permille: number) => `${(permille / 10).toFixed(1)}%`.padStart(6);
 
+function calendar(s: WorldSummary): string {
+  if (!s.startDate) return '';
+  const d = new Date(`${s.startDate}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + s.day);
+  return ` ${d.toISOString().slice(0, 10)}`;
+}
+
+function printSides(s: WorldSummary): void {
+  for (const side of s.sides) {
+    const air = side.air ? `  air ${pct(side.air.pool)} sup ${pct(side.air.superiority)}` : '';
+    const ai = side.ai ? `  [${side.ai.controlled ? side.ai.phase : 'player'}]` : '';
+    console.log(
+      `  ${side.name.padEnd(10)} power ${pct(side.combatPowerRatio)}  str ${String(side.strength).padStart(6)}/${side.initialStrength}` +
+        `  units ${String(side.formations).padStart(2)}  lost ${side.losses}  surrendered ${side.surrendered}${air}${ai}`,
+    );
+  }
+  const names = new Map(s.sides.map((x) => [x.id, x.name]));
+  const objectives = s.objectives.map((o) => `${o.name}: ${o.holder ? names.get(o.holder) : '-'}`);
+  console.log(`  objectives: ${objectives.join(' | ')}`);
+  console.log(`  engagements: ${s.engagements.length}`);
+}
+
 function printDay(s: WorldSummary): void {
-  console.log(`\n=== ${formatTick(s.tick)} (end of day ${s.day - 1})  hash ${s.hash}`);
+  console.log(`\n=== ${formatTick(s.tick)}${calendar(s)} (end of day ${s.day - 1})  hash ${s.hash}`);
+  const campaign = s.sides.length > 1;
+  if (campaign) printSides(s);
+  if (campaign && !values.units) return;
   for (const f of s.active) {
     const tag = f.aggregated ? ' [agg]' : '';
     console.log(

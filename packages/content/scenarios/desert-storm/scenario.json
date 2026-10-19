@@ -1,0 +1,1672 @@
+{
+ "id": "desert-storm",
+ "name": "Desert Storm, 1991",
+ "description": "The Gulf War from the start of the air campaign on 17 January 1991 to the cease-fire on 28 February: the coalition must liberate Kuwait. Division-level orders of battle; positions are approximate.",
+ "seed": 1991,
+ "days": 43,
+ "map": "gulf",
+ "startDate": "1991-01-17",
+ "nations": [
+  "us",
+  "uk",
+  "france",
+  "saudi-arabia",
+  "egypt",
+  "other-coalition",
+  "iraq"
+ ],
+ "sides": [
+  {
+   "id": "coalition",
+   "name": "Coalition",
+   "color": "#3f7fc4",
+   "nations": [
+    "us",
+    "uk",
+    "france",
+    "saudi-arabia",
+    "egypt",
+    "other-coalition"
+   ],
+   "air": {
+    "sortiesPerDay": 2500,
+    "quality": 2000
+   },
+   "ai": {
+    "posture": "offensive",
+    "competence": 800,
+    "offensive": {
+     "earliestDay": 32,
+     "latestDay": 40,
+     "launchWhenEnemyBelow": 450,
+     "plans": [
+      {
+       "corps": "xviii-corps",
+       "assembly": {
+        "lat": 29.4,
+        "lon": 43.6
+       },
+       "objectives": [
+        "as-salman",
+        "highway-8-tallil",
+        "jalibah"
+       ],
+       "depot": "xviii-fwd-base"
+      },
+      {
+       "corps": "vii-corps",
+       "assembly": {
+        "lat": 29.05,
+        "lon": 45.1
+       },
+       "objectives": [
+        "busayyah",
+        "rg-west",
+        "safwan"
+       ],
+       "depot": "vii-fwd-base"
+      },
+      {
+       "corps": "i-mef",
+       "assembly": {
+        "lat": 28.45,
+        "lon": 47.65
+       },
+       "objectives": [
+        "al-jaber",
+        "kuwait-airport",
+        "kuwait-city"
+       ],
+       "depot": "imef-fwd-base"
+      },
+      {
+       "corps": "jfc-north",
+       "assembly": {
+        "lat": 28.62,
+        "lon": 46.3
+       },
+       "objectives": [
+        "ali-al-salem",
+        "mutla-ridge",
+        "kuwait-city"
+       ]
+      },
+      {
+       "corps": "jfc-east",
+       "assembly": {
+        "lat": 28.42,
+        "lon": 48.2
+       },
+       "objectives": [
+        "kuwait-city"
+       ]
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "iraq",
+   "name": "Iraq",
+   "color": "#c4453f",
+   "nations": [
+    "iraq"
+   ],
+   "air": {
+    "sortiesPerDay": 400,
+    "quality": 600
+   },
+   "ai": {
+    "posture": "defensive",
+    "competence": 450,
+    "defensive": {
+     "reserves": [
+      "iq-rgfc",
+      "iq-ix-corps"
+     ],
+     "reactionKm": 80,
+     "withdrawBelow": 250,
+     "withdrawWhenLost": [
+      "al-jaber",
+      "busayyah"
+     ],
+     "withdrawTo": {
+      "lat": 30.5,
+      "lon": 47.7
+     }
+    }
+   }
+  }
+ ],
+ "objectives": [
+  {
+   "id": "kuwait-city",
+   "name": "Kuwait City",
+   "position": {
+    "lat": 29.3,
+    "lon": 47.92
+   },
+   "holder": "iraq",
+   "radiusKm": 20,
+   "points": 100
+  },
+  {
+   "id": "kuwait-airport",
+   "name": "Kuwait International Airport",
+   "position": {
+    "lat": 29.22,
+    "lon": 47.97
+   },
+   "holder": "iraq",
+   "radiusKm": 20,
+   "points": 20
+  },
+  {
+   "id": "al-jaber",
+   "name": "Al Jaber Airbase",
+   "position": {
+    "lat": 28.94,
+    "lon": 47.79
+   },
+   "holder": "iraq",
+   "radiusKm": 20,
+   "points": 15
+  },
+  {
+   "id": "ali-al-salem",
+   "name": "Ali Al Salem Airbase",
+   "position": {
+    "lat": 29.35,
+    "lon": 47.52
+   },
+   "holder": "iraq",
+   "radiusKm": 20,
+   "points": 15
+  },
+  {
+   "id": "mutla-ridge",
+   "name": "Mutla Ridge",
+   "position": {
+    "lat": 29.42,
+    "lon": 47.62
+   },
+   "holder": "iraq",
+   "radiusKm": 20,
+   "points": 15
+  },
+  {
+   "id": "as-salman",
+   "name": "As Salman",
+   "position": {
+    "lat": 30.5,
+    "lon": 44.55
+   },
+   "holder": "iraq",
+   "radiusKm": 20,
+   "points": 10
+  },
+  {
+   "id": "busayyah",
+   "name": "Al Busayyah",
+   "position": {
+    "lat": 30.12,
+    "lon": 46.12
+   },
+   "holder": "iraq",
+   "radiusKm": 20,
+   "points": 10
+  },
+  {
+   "id": "rg-west",
+   "name": "Republican Guard positions",
+   "position": {
+    "lat": 29.85,
+    "lon": 46.85
+   },
+   "holder": "iraq",
+   "radiusKm": 20,
+   "points": 20
+  },
+  {
+   "id": "highway-8-tallil",
+   "name": "Highway 8 near Tallil",
+   "position": {
+    "lat": 30.88,
+    "lon": 46.15
+   },
+   "holder": "iraq",
+   "radiusKm": 20,
+   "points": 20
+  },
+  {
+   "id": "jalibah",
+   "name": "Jalibah Airfield",
+   "position": {
+    "lat": 30.58,
+    "lon": 46.6
+   },
+   "holder": "iraq",
+   "radiusKm": 20,
+   "points": 15
+  },
+  {
+   "id": "safwan",
+   "name": "Safwan",
+   "position": {
+    "lat": 30.1,
+    "lon": 47.7
+   },
+   "holder": "iraq",
+   "radiusKm": 20,
+   "points": 20
+  }
+ ],
+ "formations": [
+  {
+   "id": "centcom",
+   "name": "Coalition Theater Command",
+   "nation": "us",
+   "echelon": "theater",
+   "position": {
+    "lat": 26.9,
+    "lon": 49.4
+   },
+   "supplyNode": "kkmc-log-base"
+  },
+  {
+   "id": "xviii-corps",
+   "name": "XVIII Airborne Corps",
+   "nation": "us",
+   "echelon": "corps",
+   "position": {
+    "lat": 27.75,
+    "lon": 47.9
+   },
+   "parent": "centcom",
+   "supplyNode": "xviii-fwd-base"
+  },
+  {
+   "id": "fr-daguet",
+   "name": "Division Daguet",
+   "nation": "france",
+   "echelon": "division",
+   "parent": "xviii-corps",
+   "template": "ds-fr-light-armoured-division",
+   "position": {
+    "lat": 27.55,
+    "lon": 47.55
+   }
+  },
+  {
+   "id": "us-82abn",
+   "name": "82nd Airborne Div",
+   "nation": "us",
+   "echelon": "division",
+   "parent": "xviii-corps",
+   "template": "ds-us-airborne-division",
+   "position": {
+    "lat": 27.7,
+    "lon": 47.75
+   }
+  },
+  {
+   "id": "us-101aa",
+   "name": "101st Airborne Div (Air Aslt)",
+   "nation": "us",
+   "echelon": "division",
+   "parent": "xviii-corps",
+   "template": "ds-us-air-assault-division",
+   "position": {
+    "lat": 27.85,
+    "lon": 47.95
+   }
+  },
+  {
+   "id": "us-24id",
+   "name": "24th Infantry Div (Mech)",
+   "nation": "us",
+   "echelon": "division",
+   "parent": "xviii-corps",
+   "template": "ds-us-mech-division",
+   "position": {
+    "lat": 27.65,
+    "lon": 48.1
+   }
+  },
+  {
+   "id": "us-3acr",
+   "name": "3rd Armored Cavalry Regt",
+   "nation": "us",
+   "echelon": "brigade",
+   "parent": "xviii-corps",
+   "template": "ds-us-cavalry-regiment",
+   "position": {
+    "lat": 27.9,
+    "lon": 47.65
+   }
+  },
+  {
+   "id": "vii-corps",
+   "name": "VII Corps",
+   "nation": "us",
+   "echelon": "corps",
+   "position": {
+    "lat": 28.15,
+    "lon": 46.05
+   },
+   "parent": "centcom",
+   "supplyNode": "vii-fwd-base"
+  },
+  {
+   "id": "us-1ad",
+   "name": "1st Armored Div",
+   "nation": "us",
+   "echelon": "division",
+   "parent": "vii-corps",
+   "template": "ds-us-armored-division",
+   "position": {
+    "lat": 28.25,
+    "lon": 45.8
+   }
+  },
+  {
+   "id": "us-3ad",
+   "name": "3rd Armored Div",
+   "nation": "us",
+   "echelon": "division",
+   "parent": "vii-corps",
+   "template": "ds-us-armored-division",
+   "position": {
+    "lat": 28.1,
+    "lon": 45.9
+   }
+  },
+  {
+   "id": "us-1id",
+   "name": "1st Infantry Div (Mech)",
+   "nation": "us",
+   "echelon": "division",
+   "parent": "vii-corps",
+   "template": "ds-us-mech-division",
+   "position": {
+    "lat": 28.2,
+    "lon": 46.15
+   }
+  },
+  {
+   "id": "us-1cav",
+   "name": "1st Cavalry Div",
+   "nation": "us",
+   "echelon": "division",
+   "parent": "vii-corps",
+   "template": "ds-us-armored-division",
+   "position": {
+    "lat": 28.05,
+    "lon": 46.25
+   },
+   "strengthPct": 70
+  },
+  {
+   "id": "uk-1armd",
+   "name": "1st Armoured Div (UK)",
+   "nation": "uk",
+   "echelon": "division",
+   "parent": "vii-corps",
+   "template": "ds-uk-armoured-division",
+   "position": {
+    "lat": 28.0,
+    "lon": 46.05
+   }
+  },
+  {
+   "id": "us-2acr",
+   "name": "2nd Armored Cavalry Regt",
+   "nation": "us",
+   "echelon": "brigade",
+   "parent": "vii-corps",
+   "template": "ds-us-cavalry-regiment",
+   "position": {
+    "lat": 28.35,
+    "lon": 45.95
+   }
+  },
+  {
+   "id": "i-mef",
+   "name": "I Marine Expeditionary Force",
+   "nation": "us",
+   "echelon": "corps",
+   "position": {
+    "lat": 28.15,
+    "lon": 47.75
+   },
+   "parent": "centcom",
+   "supplyNode": "imef-fwd-base"
+  },
+  {
+   "id": "usmc-1mardiv",
+   "name": "1st Marine Div",
+   "nation": "us",
+   "echelon": "division",
+   "parent": "i-mef",
+   "template": "ds-usmc-division",
+   "position": {
+    "lat": 28.2,
+    "lon": 47.6
+   }
+  },
+  {
+   "id": "usmc-2mardiv",
+   "name": "2nd Marine Div",
+   "nation": "us",
+   "echelon": "division",
+   "parent": "i-mef",
+   "template": "ds-usmc-division",
+   "position": {
+    "lat": 28.1,
+    "lon": 47.9
+   }
+  },
+  {
+   "id": "jfc-north",
+   "name": "Joint Forces Command North",
+   "nation": "saudi-arabia",
+   "echelon": "corps",
+   "position": {
+    "lat": 28.55,
+    "lon": 46.25
+   },
+   "parent": "centcom",
+   "supplyNode": "hafar-log-base"
+  },
+  {
+   "id": "eg-3mech",
+   "name": "3rd Mechanized Div (Egypt)",
+   "nation": "egypt",
+   "echelon": "division",
+   "parent": "jfc-north",
+   "template": "ds-arab-mech-division",
+   "position": {
+    "lat": 28.6,
+    "lon": 46.45
+   }
+  },
+  {
+   "id": "eg-4armd",
+   "name": "4th Armored Div (Egypt)",
+   "nation": "egypt",
+   "echelon": "division",
+   "parent": "jfc-north",
+   "template": "ds-arab-armored-division",
+   "position": {
+    "lat": 28.45,
+    "lon": 46.3
+   }
+  },
+  {
+   "id": "sy-9armd",
+   "name": "9th Armored Div (Syria)",
+   "nation": "other-coalition",
+   "echelon": "division",
+   "parent": "jfc-north",
+   "template": "ds-arab-armored-division",
+   "position": {
+    "lat": 28.55,
+    "lon": 46.1
+   }
+  },
+  {
+   "id": "jfcn-forces",
+   "name": "Forces Muthannah and Saad",
+   "nation": "saudi-arabia",
+   "echelon": "division",
+   "parent": "jfc-north",
+   "template": "ds-gcc-task-force",
+   "position": {
+    "lat": 28.7,
+    "lon": 46.3
+   }
+  },
+  {
+   "id": "jfc-east",
+   "name": "Joint Forces Command East",
+   "nation": "saudi-arabia",
+   "echelon": "corps",
+   "position": {
+    "lat": 28.25,
+    "lon": 48.3
+   },
+   "parent": "centcom",
+   "supplyNode": "mishab-log-base"
+  },
+  {
+   "id": "jfce-abubakr-othman",
+   "name": "Forces Abu Bakr and Othman",
+   "nation": "saudi-arabia",
+   "echelon": "division",
+   "parent": "jfc-east",
+   "template": "ds-gcc-task-force",
+   "position": {
+    "lat": 28.3,
+    "lon": 48.15
+   }
+  },
+  {
+   "id": "jfce-omar-tariq",
+   "name": "Task Forces Omar and Tariq",
+   "nation": "saudi-arabia",
+   "echelon": "division",
+   "parent": "jfc-east",
+   "template": "ds-gcc-task-force",
+   "position": {
+    "lat": 28.2,
+    "lon": 48.4
+   }
+  },
+  {
+   "id": "iq-kto",
+   "name": "Iraqi Forces, Kuwait Theater",
+   "nation": "iraq",
+   "echelon": "theater",
+   "position": {
+    "lat": 30.5,
+    "lon": 47.8
+   },
+   "supplyNode": "basra-depot"
+  },
+  {
+   "id": "iq-vii-corps",
+   "name": "VII Corps (Iraq)",
+   "nation": "iraq",
+   "echelon": "corps",
+   "position": {
+    "lat": 29.55,
+    "lon": 45.95
+   },
+   "parent": "iq-kto",
+   "supplyNode": "iq-west-depot"
+  },
+  {
+   "id": "iq-27id",
+   "name": "27th Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-vii-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 29.22,
+    "lon": 46.45
+   },
+   "strengthPct": 70,
+   "morale": 550,
+   "fortification": 900
+  },
+  {
+   "id": "iq-28id",
+   "name": "28th Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-vii-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 29.28,
+    "lon": 46.1
+   },
+   "strengthPct": 70,
+   "morale": 550,
+   "fortification": 900
+  },
+  {
+   "id": "iq-25id",
+   "name": "25th Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-vii-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 29.36,
+    "lon": 45.75
+   },
+   "strengthPct": 70,
+   "morale": 550,
+   "fortification": 900
+  },
+  {
+   "id": "iq-48id",
+   "name": "48th Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-vii-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 29.46,
+    "lon": 45.35
+   },
+   "strengthPct": 70,
+   "morale": 550,
+   "fortification": 900
+  },
+  {
+   "id": "iq-26id",
+   "name": "26th Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-vii-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 29.62,
+    "lon": 45.7
+   },
+   "strengthPct": 80,
+   "morale": 650,
+   "fortification": 500
+  },
+  {
+   "id": "iq-31id",
+   "name": "31st Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-vii-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 29.55,
+    "lon": 46.25
+   },
+   "strengthPct": 80,
+   "morale": 650,
+   "fortification": 500
+  },
+  {
+   "id": "iq-47id",
+   "name": "47th Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-vii-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 29.75,
+    "lon": 46.05
+   },
+   "strengthPct": 80,
+   "morale": 650,
+   "fortification": 500
+  },
+  {
+   "id": "iq-12ad",
+   "name": "12th Armored Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-vii-corps",
+   "template": "ds-iq-armored-division",
+   "position": {
+    "lat": 29.85,
+    "lon": 46.4
+   },
+   "strengthPct": 85,
+   "morale": 700,
+   "fortification": 400
+  },
+  {
+   "id": "iq-iv-corps",
+   "name": "IV Corps (Iraq)",
+   "nation": "iraq",
+   "echelon": "corps",
+   "position": {
+    "lat": 28.85,
+    "lon": 47.1
+   },
+   "parent": "iq-kto",
+   "supplyNode": "kuwait-south-depot"
+  },
+  {
+   "id": "iq-16id",
+   "name": "16th Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-iv-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 28.68,
+    "lon": 46.8
+   },
+   "strengthPct": 70,
+   "morale": 550,
+   "fortification": 900
+  },
+  {
+   "id": "iq-20id",
+   "name": "20th Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-iv-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 28.66,
+    "lon": 47.05
+   },
+   "strengthPct": 70,
+   "morale": 550,
+   "fortification": 900
+  },
+  {
+   "id": "iq-30id",
+   "name": "30th Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-iv-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 28.66,
+    "lon": 47.25
+   },
+   "strengthPct": 70,
+   "morale": 550,
+   "fortification": 900
+  },
+  {
+   "id": "iq-34id",
+   "name": "34th Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-iv-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 28.7,
+    "lon": 47.45
+   },
+   "strengthPct": 70,
+   "morale": 550,
+   "fortification": 900
+  },
+  {
+   "id": "iq-36id",
+   "name": "36th Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-iv-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 28.88,
+    "lon": 46.7
+   },
+   "strengthPct": 70,
+   "morale": 550,
+   "fortification": 900
+  },
+  {
+   "id": "iq-1md",
+   "name": "1st Mechanized Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-iv-corps",
+   "template": "ds-iq-mech-division",
+   "position": {
+    "lat": 28.95,
+    "lon": 47.1
+   },
+   "strengthPct": 85,
+   "morale": 700,
+   "fortification": 400
+  },
+  {
+   "id": "iq-6ad",
+   "name": "6th Armored Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-iv-corps",
+   "template": "ds-iq-armored-division",
+   "position": {
+    "lat": 29.05,
+    "lon": 47.4
+   },
+   "strengthPct": 85,
+   "morale": 700,
+   "fortification": 400
+  },
+  {
+   "id": "iq-21id",
+   "name": "21st Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-iv-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 28.98,
+    "lon": 46.82
+   },
+   "strengthPct": 80,
+   "morale": 650,
+   "fortification": 500
+  },
+  {
+   "id": "iq-iii-corps",
+   "name": "III Corps (Iraq)",
+   "nation": "iraq",
+   "echelon": "corps",
+   "position": {
+    "lat": 28.85,
+    "lon": 47.95
+   },
+   "parent": "iq-kto",
+   "supplyNode": "iq-east-depot"
+  },
+  {
+   "id": "iq-7id",
+   "name": "7th Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-iii-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 28.68,
+    "lon": 47.65
+   },
+   "strengthPct": 70,
+   "morale": 550,
+   "fortification": 900
+  },
+  {
+   "id": "iq-14id",
+   "name": "14th Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-iii-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 28.66,
+    "lon": 47.85
+   },
+   "strengthPct": 70,
+   "morale": 550,
+   "fortification": 900
+  },
+  {
+   "id": "iq-29id",
+   "name": "29th Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-iii-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 28.62,
+    "lon": 48.05
+   },
+   "strengthPct": 70,
+   "morale": 550,
+   "fortification": 900
+  },
+  {
+   "id": "iq-18id",
+   "name": "18th Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-iii-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 28.62,
+    "lon": 48.25
+   },
+   "strengthPct": 70,
+   "morale": 550,
+   "fortification": 900
+  },
+  {
+   "id": "iq-19id",
+   "name": "19th Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-iii-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 28.85,
+    "lon": 48.2
+   },
+   "strengthPct": 70,
+   "morale": 550,
+   "fortification": 900
+  },
+  {
+   "id": "iq-11id",
+   "name": "11th Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-iii-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 29.05,
+    "lon": 48.1
+   },
+   "strengthPct": 70,
+   "morale": 550,
+   "fortification": 900
+  },
+  {
+   "id": "iq-15id",
+   "name": "15th Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-iii-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 29.15,
+    "lon": 47.98
+   },
+   "strengthPct": 70,
+   "morale": 550,
+   "fortification": 900
+  },
+  {
+   "id": "iq-8id",
+   "name": "8th Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-iii-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 29.25,
+    "lon": 47.8
+   },
+   "strengthPct": 70,
+   "morale": 550,
+   "fortification": 900
+  },
+  {
+   "id": "iq-3ad",
+   "name": "3rd Armored Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-iii-corps",
+   "template": "ds-iq-armored-division",
+   "position": {
+    "lat": 28.85,
+    "lon": 47.7
+   },
+   "strengthPct": 85,
+   "morale": 700,
+   "fortification": 400
+  },
+  {
+   "id": "iq-5md",
+   "name": "5th Mechanized Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-iii-corps",
+   "template": "ds-iq-mech-division",
+   "position": {
+    "lat": 28.8,
+    "lon": 48.0
+   },
+   "strengthPct": 85,
+   "morale": 700,
+   "fortification": 400
+  },
+  {
+   "id": "iq-35id",
+   "name": "35th Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-iii-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 29.0,
+    "lon": 47.85
+   },
+   "strengthPct": 80,
+   "morale": 650,
+   "fortification": 500
+  },
+  {
+   "id": "iq-ii-corps",
+   "name": "II Corps (Iraq)",
+   "nation": "iraq",
+   "echelon": "corps",
+   "position": {
+    "lat": 29.7,
+    "lon": 47.75
+   },
+   "parent": "iq-kto",
+   "supplyNode": "kuwait-city-depot"
+  },
+  {
+   "id": "iq-2id",
+   "name": "2nd Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-ii-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 29.6,
+    "lon": 47.6
+   },
+   "strengthPct": 80,
+   "morale": 650,
+   "fortification": 500
+  },
+  {
+   "id": "iq-37id",
+   "name": "37th Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-ii-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 29.78,
+    "lon": 47.9
+   },
+   "strengthPct": 80,
+   "morale": 650,
+   "fortification": 500
+  },
+  {
+   "id": "iq-51md",
+   "name": "51st Mechanized Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-ii-corps",
+   "template": "ds-iq-mech-division",
+   "position": {
+    "lat": 29.72,
+    "lon": 47.55
+   },
+   "strengthPct": 85,
+   "morale": 700,
+   "fortification": 400
+  },
+  {
+   "id": "iq-rgfc",
+   "name": "Republican Guard Forces Command",
+   "nation": "iraq",
+   "echelon": "army",
+   "position": {
+    "lat": 30.2,
+    "lon": 47.4
+   },
+   "parent": "iq-kto",
+   "supplyNode": "basra-depot"
+  },
+  {
+   "id": "iq-rg-1-corps",
+   "name": "1st Republican Guard Corps",
+   "nation": "iraq",
+   "echelon": "corps",
+   "position": {
+    "lat": 30.0,
+    "lon": 47.1
+   },
+   "parent": "iq-rgfc"
+  },
+  {
+   "id": "iq-rg-hammurabi",
+   "name": "Hammurabi Armored Div (RG)",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-rg-1-corps",
+   "template": "ds-iq-rg-armored-division",
+   "position": {
+    "lat": 30.15,
+    "lon": 47.35
+   },
+   "strengthPct": 95,
+   "morale": 850,
+   "fortification": 300
+  },
+  {
+   "id": "iq-rg-medina",
+   "name": "Al-Medina Armored Div (RG)",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-rg-1-corps",
+   "template": "ds-iq-rg-armored-division",
+   "position": {
+    "lat": 29.95,
+    "lon": 47.05
+   },
+   "strengthPct": 95,
+   "morale": 850,
+   "fortification": 300
+  },
+  {
+   "id": "iq-rg-tawakalna",
+   "name": "Tawakalna Mechanized Div (RG)",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-rg-1-corps",
+   "template": "ds-iq-rg-mech-division",
+   "position": {
+    "lat": 29.75,
+    "lon": 46.75
+   },
+   "strengthPct": 95,
+   "morale": 850,
+   "fortification": 300
+  },
+  {
+   "id": "iq-rg-alfaw",
+   "name": "Al-Faw Motorized Div (RG)",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-rg-1-corps",
+   "template": "ds-iq-rg-infantry-division",
+   "position": {
+    "lat": 30.2,
+    "lon": 47.6
+   },
+   "strengthPct": 95,
+   "morale": 850,
+   "fortification": 300
+  },
+  {
+   "id": "iq-rg-assaiqa",
+   "name": "As Saiqa Special Forces Div (RG)",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-rg-1-corps",
+   "template": "ds-iq-rg-infantry-division",
+   "position": {
+    "lat": 30.3,
+    "lon": 47.85
+   },
+   "strengthPct": 70,
+   "morale": 850,
+   "fortification": 300
+  },
+  {
+   "id": "iq-rg-2-corps",
+   "name": "2nd Republican Guard Corps",
+   "nation": "iraq",
+   "echelon": "corps",
+   "position": {
+    "lat": 30.35,
+    "lon": 47.45
+   },
+   "parent": "iq-rgfc"
+  },
+  {
+   "id": "iq-rg-baghdad",
+   "name": "Baghdad Mechanized Div (RG)",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-rg-2-corps",
+   "template": "ds-iq-rg-mech-division",
+   "position": {
+    "lat": 30.45,
+    "lon": 47.7
+   },
+   "strengthPct": 95,
+   "morale": 850,
+   "fortification": 300
+  },
+  {
+   "id": "iq-rg-nebuchadnezzar",
+   "name": "Nebuchadnezzar Mechanized Div (RG)",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-rg-2-corps",
+   "template": "ds-iq-rg-mech-division",
+   "position": {
+    "lat": 30.4,
+    "lon": 47.45
+   },
+   "strengthPct": 95,
+   "morale": 850,
+   "fortification": 300
+  },
+  {
+   "id": "iq-rg-adnan",
+   "name": "Adnan Motorized Div (RG)",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-rg-2-corps",
+   "template": "ds-iq-rg-infantry-division",
+   "position": {
+    "lat": 30.3,
+    "lon": 47.25
+   },
+   "strengthPct": 95,
+   "morale": 850,
+   "fortification": 300
+  },
+  {
+   "id": "iq-ix-corps",
+   "name": "IX Corps (Iraq)",
+   "nation": "iraq",
+   "echelon": "corps",
+   "position": {
+    "lat": 30.2,
+    "lon": 46.6
+   },
+   "parent": "iq-kto",
+   "supplyNode": "nasiriyah-depot"
+  },
+  {
+   "id": "iq-10ad",
+   "name": "10th Armored Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-ix-corps",
+   "template": "ds-iq-armored-division",
+   "position": {
+    "lat": 30.05,
+    "lon": 46.55
+   },
+   "strengthPct": 85,
+   "morale": 700,
+   "fortification": 400
+  },
+  {
+   "id": "iq-17ad",
+   "name": "17th Armored Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-ix-corps",
+   "template": "ds-iq-armored-division",
+   "position": {
+    "lat": 30.25,
+    "lon": 46.85
+   },
+   "strengthPct": 85,
+   "morale": 700,
+   "fortification": 400
+  },
+  {
+   "id": "iq-52ad",
+   "name": "52nd Armored Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-ix-corps",
+   "template": "ds-iq-armored-division",
+   "position": {
+    "lat": 29.95,
+    "lon": 46.3
+   },
+   "strengthPct": 85,
+   "morale": 700,
+   "fortification": 400
+  },
+  {
+   "id": "iq-45id",
+   "name": "45th Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-ix-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 30.5,
+    "lon": 44.55
+   },
+   "supplyNode": "salman-depot",
+   "strengthPct": 80,
+   "morale": 650,
+   "fortification": 500
+  },
+  {
+   "id": "iq-49id",
+   "name": "49th Infantry Div",
+   "nation": "iraq",
+   "echelon": "division",
+   "parent": "iq-ix-corps",
+   "template": "ds-iq-infantry-division",
+   "position": {
+    "lat": 30.85,
+    "lon": 46.25
+   },
+   "strengthPct": 80,
+   "morale": 650,
+   "fortification": 500
+  }
+ ],
+ "supply": {
+  "nodes": [
+   {
+    "id": "dammam-port",
+    "name": "Dammam Port",
+    "kind": "source",
+    "side": "coalition",
+    "position": {
+     "lat": 26.43,
+     "lon": 50.05
+    },
+    "capacity": 100000,
+    "stock": 40000,
+    "productionPerTick": 400
+   },
+   {
+    "id": "jubail-port",
+    "name": "Jubail Port",
+    "kind": "source",
+    "side": "coalition",
+    "position": {
+     "lat": 27.0,
+     "lon": 49.6
+    },
+    "capacity": 80000,
+    "stock": 30000,
+    "productionPerTick": 300
+   },
+   {
+    "id": "kkmc-log-base",
+    "name": "King Khalid Military City Log Base",
+    "kind": "depot",
+    "side": "coalition",
+    "position": {
+     "lat": 27.9,
+     "lon": 45.53
+    },
+    "capacity": 20000,
+    "stock": 12000
+   },
+   {
+    "id": "hafar-log-base",
+    "name": "Hafar al-Batin Log Base",
+    "kind": "depot",
+    "side": "coalition",
+    "position": {
+     "lat": 28.43,
+     "lon": 45.96
+    },
+    "capacity": 12000,
+    "stock": 8000
+   },
+   {
+    "id": "rafha-log-base",
+    "name": "Rafha Log Base",
+    "kind": "depot",
+    "side": "coalition",
+    "position": {
+     "lat": 29.62,
+     "lon": 43.49
+    },
+    "capacity": 10000,
+    "stock": 4000
+   },
+   {
+    "id": "mishab-log-base",
+    "name": "Al Mishab Log Base",
+    "kind": "depot",
+    "side": "coalition",
+    "position": {
+     "lat": 28.12,
+     "lon": 48.6
+    },
+    "capacity": 10000,
+    "stock": 6000
+   },
+   {
+    "id": "xviii-fwd-base",
+    "name": "XVIII Corps Forward Log Base",
+    "kind": "depot",
+    "side": "coalition",
+    "position": {
+     "lat": 27.8,
+     "lon": 47.85
+    },
+    "capacity": 8000,
+    "stock": 5000,
+    "mobile": true,
+    "speedKmPerDay": 120
+   },
+   {
+    "id": "vii-fwd-base",
+    "name": "VII Corps Forward Log Base",
+    "kind": "depot",
+    "side": "coalition",
+    "position": {
+     "lat": 28.15,
+     "lon": 46.05
+    },
+    "capacity": 8000,
+    "stock": 5000,
+    "mobile": true,
+    "speedKmPerDay": 120
+   },
+   {
+    "id": "imef-fwd-base",
+    "name": "I MEF Forward Log Base",
+    "kind": "depot",
+    "side": "coalition",
+    "position": {
+     "lat": 28.1,
+     "lon": 47.8
+    },
+    "capacity": 8000,
+    "stock": 5000,
+    "mobile": true,
+    "speedKmPerDay": 100
+   },
+   {
+    "id": "baghdad-source",
+    "name": "Baghdad",
+    "kind": "source",
+    "side": "iraq",
+    "position": {
+     "lat": 33.3,
+     "lon": 44.4
+    },
+    "capacity": 200000,
+    "stock": 80000,
+    "productionPerTick": 500
+   },
+   {
+    "id": "nasiriyah-depot",
+    "name": "An Nasiriyah Depot",
+    "kind": "depot",
+    "side": "iraq",
+    "position": {
+     "lat": 31.05,
+     "lon": 46.25
+    },
+    "capacity": 30000,
+    "stock": 25000
+   },
+   {
+    "id": "basra-depot",
+    "name": "Basra Depot",
+    "kind": "depot",
+    "side": "iraq",
+    "position": {
+     "lat": 30.5,
+     "lon": 47.78
+    },
+    "capacity": 60000,
+    "stock": 50000
+   },
+   {
+    "id": "kuwait-city-depot",
+    "name": "Kuwait City Depot",
+    "kind": "depot",
+    "side": "iraq",
+    "position": {
+     "lat": 29.33,
+     "lon": 47.9
+    },
+    "capacity": 40000,
+    "stock": 35000
+   },
+   {
+    "id": "kuwait-south-depot",
+    "name": "Southern Kuwait Depot",
+    "kind": "depot",
+    "side": "iraq",
+    "position": {
+     "lat": 29.0,
+     "lon": 47.35
+    },
+    "capacity": 40000,
+    "stock": 35000
+   },
+   {
+    "id": "iq-east-depot",
+    "name": "Al Wafrah Depot",
+    "kind": "depot",
+    "side": "iraq",
+    "position": {
+     "lat": 28.9,
+     "lon": 47.95
+    },
+    "capacity": 40000,
+    "stock": 35000
+   },
+   {
+    "id": "iq-west-depot",
+    "name": "Western Depot (Iraq)",
+    "kind": "depot",
+    "side": "iraq",
+    "position": {
+     "lat": 29.8,
+     "lon": 46.2
+    },
+    "capacity": 30000,
+    "stock": 25000
+   },
+   {
+    "id": "salman-depot",
+    "name": "As Salman Depot",
+    "kind": "depot",
+    "side": "iraq",
+    "position": {
+     "lat": 30.5,
+     "lon": 44.6
+    },
+    "capacity": 8000,
+    "stock": 7000
+   }
+  ],
+  "links": [
+   {
+    "id": "tapline-dammam-kkmc",
+    "from": "dammam-port",
+    "to": "kkmc-log-base",
+    "mode": "road",
+    "capacityPerTick": 400,
+    "variance": 100,
+    "vulnerability": 0.3
+   },
+   {
+    "id": "road-kkmc-hafar",
+    "from": "kkmc-log-base",
+    "to": "hafar-log-base",
+    "mode": "road",
+    "capacityPerTick": 260,
+    "variance": 100,
+    "vulnerability": 0.3
+   },
+   {
+    "id": "tapline-kkmc-rafha",
+    "from": "kkmc-log-base",
+    "to": "rafha-log-base",
+    "mode": "road",
+    "capacityPerTick": 140,
+    "variance": 120,
+    "vulnerability": 0.3
+   },
+   {
+    "id": "convoy-rafha-xviii",
+    "from": "rafha-log-base",
+    "to": "xviii-fwd-base",
+    "mode": "road",
+    "capacityPerTick": 120,
+    "variance": 150,
+    "vulnerability": 0.4
+   },
+   {
+    "id": "convoy-hafar-vii",
+    "from": "hafar-log-base",
+    "to": "vii-fwd-base",
+    "mode": "road",
+    "capacityPerTick": 200,
+    "variance": 150,
+    "vulnerability": 0.4
+   },
+   {
+    "id": "coastal-jubail-mishab",
+    "from": "jubail-port",
+    "to": "mishab-log-base",
+    "mode": "road",
+    "capacityPerTick": 140,
+    "variance": 100,
+    "vulnerability": 0.3
+   },
+   {
+    "id": "convoy-jubail-imef",
+    "from": "jubail-port",
+    "to": "imef-fwd-base",
+    "mode": "road",
+    "capacityPerTick": 140,
+    "variance": 150,
+    "vulnerability": 0.4
+   },
+   {
+    "id": "euphrates-bridges",
+    "from": "baghdad-source",
+    "to": "nasiriyah-depot",
+    "mode": "rail",
+    "capacityPerTick": 260,
+    "variance": 100,
+    "vulnerability": 0.8
+   },
+   {
+    "id": "tigris-highway",
+    "from": "baghdad-source",
+    "to": "basra-depot",
+    "mode": "road",
+    "capacityPerTick": 260,
+    "variance": 100,
+    "vulnerability": 0.7
+   },
+   {
+    "id": "highway-8",
+    "from": "nasiriyah-depot",
+    "to": "basra-depot",
+    "mode": "road",
+    "capacityPerTick": 150,
+    "variance": 100,
+    "vulnerability": 0.7
+   },
+   {
+    "id": "road-nasiriyah-west",
+    "from": "nasiriyah-depot",
+    "to": "iq-west-depot",
+    "mode": "road",
+    "capacityPerTick": 100,
+    "variance": 120,
+    "vulnerability": 0.6
+   },
+   {
+    "id": "track-nasiriyah-salman",
+    "from": "nasiriyah-depot",
+    "to": "salman-depot",
+    "mode": "road",
+    "capacityPerTick": 30,
+    "variance": 150,
+    "vulnerability": 0.6
+   },
+   {
+    "id": "highway-80",
+    "from": "basra-depot",
+    "to": "kuwait-city-depot",
+    "mode": "road",
+    "capacityPerTick": 220,
+    "variance": 100,
+    "vulnerability": 0.8
+   },
+   {
+    "id": "road-kuwait-south",
+    "from": "kuwait-city-depot",
+    "to": "kuwait-south-depot",
+    "mode": "road",
+    "capacityPerTick": 150,
+    "variance": 100,
+    "vulnerability": 0.7
+   },
+   {
+    "id": "road-kuwait-wafrah",
+    "from": "kuwait-city-depot",
+    "to": "iq-east-depot",
+    "mode": "road",
+    "capacityPerTick": 150,
+    "variance": 100,
+    "vulnerability": 0.7
+   }
+  ]
+ },
+ "events": []
+}

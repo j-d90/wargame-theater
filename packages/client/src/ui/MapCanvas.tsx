@@ -24,7 +24,7 @@ export function MapCanvas() {
     });
     const sync = () => {
       const s = store.get();
-      view.setState(s.summary, s.selection, s.mode);
+      view.setState(s.summary, s.selection, s.mode, s.playerSide);
     };
     let lastFocus = store.get().focus?.seq ?? 0;
     const unsubscribe = store.subscribe(() => {

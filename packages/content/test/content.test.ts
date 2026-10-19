@@ -140,3 +140,40 @@ describe('maps', () => {
     expect(JSON.stringify(GameMapSchema.safeParse(bad).error?.issues)).toMatch(/expected \d+ cells/);
   });
 });
+
+describe('Desert Storm content', () => {
+  const dsRaw = () => structuredClone(scenarioFiles['desert-storm']) as Record<string, any>;
+  const dsErrors = (mutate: (s: Record<string, any>) => void) => {
+    const raw = dsRaw();
+    mutate(raw);
+    const r = validateScenario(raw);
+    return r.ok ? '' : r.errors.join('\n');
+  };
+
+  it('loads with two sides, 43 Iraqi divisions, and cited sources', () => {
+    const r = loadScenario('desert-storm');
+    expect(r.scenario.sides.map((s) => s.id)).toEqual(['coalition', 'iraq']);
+    const iraqi = r.scenario.formations.filter((f) => f.nation === 'iraq' && f.template);
+    expect(iraqi).toHaveLength(43);
+    for (const f of r.scenario.formations.filter((x) => x.template)) {
+      expect(r.units.get(f.template!)?.source).toMatch(/Abstract game values/);
+    }
+  });
+
+  it('puts every scenario without sides on a single default side', () => {
+    expect(loadScenario('tiny').scenario.sides.map((s) => s.id)).toEqual(['default']);
+  });
+
+  it.each([
+    ['a nation on two sides', (s: any) => s.sides[1].nations.push('us'), /nation "us" is on more than one side/],
+    ['a nation on no side', (s: any) => (s.sides[1].nations = []), /Too small|nation "iraq" is not on any side/],
+    ['a supply node without a side', (s: any) => delete s.supply.nodes[0].side, /needs a side/],
+    ['a plan objective that does not exist', (s: any) => s.sides[0].ai.offensive.plans[0].objectives.push('moscow'), /objective "moscow" does not exist/],
+    ['a plan depot that is not mobile', (s: any) => (s.sides[0].ai.offensive.plans[0].depot = 'kkmc-log-base'), /not a mobile supply node/],
+    ['an objective held by a non-side', (s: any) => (s.objectives[0].holder = 'martians'), /holder "martians" is not a side/],
+    ['an objective in the sea', (s: any) => (s.objectives[0].position = { lat: 27.3, lon: 50.6 }), /impassable terrain/],
+    ['an offensive posture without a plan', (s: any) => delete s.sides[0].ai.offensive, /needs an offensive plan/],
+  ])('rejects %s', (_name, mutate, pattern) => {
+    expect(dsErrors(mutate)).toMatch(pattern);
+  });
+});

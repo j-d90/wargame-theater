@@ -5,7 +5,7 @@
 
 import type { Position } from '@tow/content';
 import { TICKS_PER_DAY } from '../core/time.ts';
-import type { Formation, TerrainGrid, WorldState } from '../core/world.ts';
+import type { Formation, OrderKind, TerrainGrid, WorldState } from '../core/world.ts';
 import { activeFormations, isActive } from './formations.ts';
 import { mobility } from './derived.ts';
 
@@ -22,13 +22,21 @@ function cellOf(t: TerrainGrid, p: Position): { c: number; r: number } {
   return { c: Math.floor(p.x / t.cellKm), r: Math.floor(p.y / t.cellKm) };
 }
 
+/** Terrain class code at a position, or undefined off the map or without one. */
+export function terrainCodeAt(world: WorldState, p: Position): string | undefined {
+  const t = world.terrain;
+  if (!t) return undefined;
+  const { c, r } = cellOf(t, p);
+  if (c < 0 || r < 0 || c >= t.cols || r >= t.rows) return undefined;
+  return t.cells[r * t.cols + c];
+}
+
 /** Terrain speed factor at a position, permille. Off-map counts as impassable. */
 export function terrainSpeedAt(world: WorldState, p: Position): number {
   const t = world.terrain;
   if (!t) return 1000;
-  const { c, r } = cellOf(t, p);
-  if (c < 0 || r < 0 || c >= t.cols || r >= t.rows) return 0;
-  return t.speeds[t.cells[r * t.cols + c]!] ?? 0;
+  const code = terrainCodeAt(world, p);
+  return code === undefined ? 0 : (t.speeds[code] ?? 0);
 }
 
 /** Binary min-heap keyed by (f, cell index), so ties always break the same way. */
@@ -77,11 +85,18 @@ class Heap {
   }
 }
 
+/** Cells near these points cost `factor` times more to cross. */
+export interface Avoid {
+  points: Position[];
+  radiusKm: number;
+  factor: number;
+}
+
 /**
  * Waypoints from `from` to `to`, ending exactly at `to`, or null when `to` is
  * off the map, impassable, or unreachable. Without terrain the path is a straight line.
  */
-export function planPath(world: WorldState, from: Position, to: Position): Position[] | null {
+export function planPath(world: WorldState, from: Position, to: Position, avoid?: Avoid): Position[] | null {
   const t = world.terrain;
   if (!t) return [{ ...to }];
   if (terrainSpeedAt(world, to) === 0) return null;
@@ -92,6 +107,21 @@ export function planPath(world: WorldState, from: Position, to: Position): Posit
   if (start === goal) return [{ ...to }];
 
   const speed = (i: number) => t.speeds[t.cells[i]!] ?? 0;
+  const penalty = new Float64Array(cols * rows).fill(1);
+  if (avoid) {
+    const reach = Math.ceil(avoid.radiusKm / t.cellKm);
+    for (const p of avoid.points) {
+      const pc = Math.floor(p.x / t.cellKm);
+      const pr = Math.floor(p.y / t.cellKm);
+      for (let r = Math.max(0, pr - reach); r <= Math.min(rows - 1, pr + reach); r++) {
+        for (let c = Math.max(0, pc - reach); c <= Math.min(cols - 1, pc + reach); c++) {
+          const dx = (c + 0.5) * t.cellKm - p.x;
+          const dy = (r + 0.5) * t.cellKm - p.y;
+          if (dx * dx + dy * dy <= avoid.radiusKm * avoid.radiusKm) penalty[r * cols + c] = avoid.factor;
+        }
+      }
+    }
+  }
   const gc = goal % cols;
   const gr = Math.floor(goal / cols);
   const h = (i: number) => {
@@ -124,7 +154,7 @@ export function planPath(world: WorldState, from: Position, to: Position): Posit
         if (sp === 0 || closed[n]) continue;
         const diagonal = dr !== 0 && dc !== 0;
         if (diagonal && (speed(cr * cols + nc) === 0 || speed(nr * cols + cc) === 0)) continue;
-        const cost = g[cur]! + Math.round(((diagonal ? DIAG : ORTHO) * 1000) / sp);
+        const cost = g[cur]! + Math.round(((diagonal ? DIAG : ORTHO) * 1000 * penalty[n]!) / sp);
         if (cost < g[n]!) {
           g[n] = cost;
           came[n] = cur;
@@ -152,26 +182,32 @@ export function planPath(world: WorldState, from: Position, to: Position): Posit
 }
 
 /** Give an active formation a move order. Throws if it can't go there. */
-export function issueMove(world: WorldState, id: string, to: Position): void {
+export function issueMove(world: WorldState, id: string, to: Position, kind: OrderKind = 'move'): void {
   const f = world.formations[id];
   if (!f) throw new Error(`move: unknown formation "${id}"`);
   if (!isActive(world, id)) throw new Error(`move: "${f.name}" is not an active formation (it is expanded or hidden)`);
-  const path = planPath(world, f.position, to);
+  // Except when attacking, steer clear of known enemy formations.
+  const enemies = kind === 'attack' ? [] : activeFormations(world).filter((e) => e.side !== f.side);
+  const avoid = enemies.length > 0 ? { points: enemies.map((e) => e.position), radiusKm: 30, factor: 8 } : undefined;
+  const path = planPath(world, f.position, to, avoid);
   if (!path) throw new Error(`move: "${f.name}" can't reach that point (water, off the map, or cut off)`);
-  f.order = { destination: { ...to }, path };
+  f.order = { kind, destination: { ...to }, path };
 }
 
 /** km a formation covers this tick at its current position, readiness, and terrain. */
 export function kmPerTick(world: WorldState, f: Formation): number {
   // A formation left on impassable ground (e.g. after an expand) can still walk off it.
   const terrain = terrainSpeedAt(world, f.position) || 500;
-  return (f.stats.speed * mobility(f.stats, world.rules) * terrain) / (1_000_000 * TICKS_PER_DAY);
+  const pace = f.order?.kind === 'attack' ? world.rules.attackPace : 1000;
+  return (f.stats.speed * mobility(f.stats, world.rules) * terrain * pace) / (1_000_000_000 * TICKS_PER_DAY);
 }
 
 export function movementPhase(world: WorldState): void {
   for (const f of activeFormations(world)) {
     const order = f.order;
     if (!order) continue;
+    // Contact pins a formation in place until one side gives way; only a retreat breaks off.
+    if (f.inContact && order.kind !== 'retreat') continue;
     let budget = kmPerTick(world, f);
     while (budget > 0 && order.path.length > 0) {
       const wp = order.path[0]!;

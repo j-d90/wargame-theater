@@ -17,6 +17,14 @@ export function daysOfSupply(stock: number, supplyPerTick: number): string {
   return days >= 10 ? `${Math.round(days)} d` : `${days.toFixed(1)} d`;
 }
 
+/** Calendar date of a game day, e.g. "24 Feb 1991", or null without a start date. */
+export function calendarDate(startDate: string | null, day: number): string | null {
+  if (!startDate) return null;
+  const d = new Date(`${startDate}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + day);
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+}
+
 export function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }

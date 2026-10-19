@@ -22,6 +22,8 @@ export const COLORS = {
   path: 0xffffff,
   tether: 0x7fd1a8,
   tetherBroken: 0xe0483e,
+  contact: 0xff9a2e,
+  damaged: 0xf2b134,
   good: 0x4caf50,
   warn: 0xf2b134,
   bad: 0xe0483e,

@@ -2,7 +2,11 @@ import { defaultCatalog, scenarioFiles, type Catalog } from './catalog.ts';
 import { latLonToXY } from './projection.ts';
 import {
   ScenarioSchema,
+  type AiSpec,
   type FormationSpec,
+  type ObjectiveSpec,
+  type OffensivePlan,
+  type SideSpec,
   type GameMap,
   type Nation,
   type Position,
@@ -19,10 +23,20 @@ type MoveEvent = Extract<ScenarioEvent, { type: 'move' }>;
 export type ResolvedFormationSpec = Omit<FormationSpec, 'position'> & { position: Position };
 export type ResolvedSupplyNodeSpec = Omit<SupplyNodeSpec, 'position'> & { position: Position };
 export type ResolvedEvent = Exclude<ScenarioEvent, MoveEvent> | (Omit<MoveEvent, 'to'> & { to: Position });
-export interface ResolvedScenarioData extends Omit<Scenario, 'formations' | 'supply' | 'events'> {
+export type ResolvedObjective = Omit<ObjectiveSpec, 'position'> & { position: Position };
+export type ResolvedPlan = Omit<OffensivePlan, 'assembly'> & { assembly: Position };
+export interface ResolvedAi extends Omit<AiSpec, 'offensive' | 'defensive'> {
+  offensive?: Omit<NonNullable<AiSpec['offensive']>, 'plans'> & { plans: ResolvedPlan[] };
+  defensive?: Omit<NonNullable<AiSpec['defensive']>, 'withdrawTo'> & { withdrawTo: Position };
+}
+export type ResolvedSide = Omit<SideSpec, 'ai'> & { ai?: ResolvedAi };
+export interface ResolvedScenarioData extends Omit<Scenario, 'formations' | 'supply' | 'events' | 'sides' | 'objectives'> {
   formations: ResolvedFormationSpec[];
   supply: { nodes: ResolvedSupplyNodeSpec[]; links: SupplyLinkSpec[] };
   events: ResolvedEvent[];
+  /** Always at least one; scenarios without sides get a single side holding every nation. */
+  sides: ResolvedSide[];
+  objectives: ResolvedObjective[];
 }
 
 export interface ResolvedScenario {
@@ -135,6 +149,7 @@ export function validateScenario(raw: unknown, catalog: Catalog = defaultCatalog
   for (const n of s.supply.nodes) {
     const where = `supply node "${n.id}"`;
     if (n.kind === 'depot' && n.productionPerTick !== undefined) errors.push(`${where}: only sources produce`);
+    if (n.speedKmPerDay !== undefined && !n.mobile) errors.push(`${where}: only mobile nodes have a speed`);
     if ((n.stock ?? 0) > n.capacity) errors.push(`${where}: stock exceeds capacity`);
     nodes.push({ ...n, position: resolvePos(n.position, where, false) });
   }
@@ -162,11 +177,67 @@ export function validateScenario(raw: unknown, catalog: Catalog = defaultCatalog
     }
   });
 
+  // Sides: every scenario nation on exactly one side.
+  const sideSpecs: SideSpec[] = s.sides ?? [{ id: 'default', name: 'Default', nations: [...s.nations] }];
+  const sideIds = dupes('side', sideSpecs.map((x) => x.id));
+  const nationSide = new Map<string, string>();
+  for (const side of sideSpecs) {
+    for (const n of side.nations) {
+      if (!s.nations.includes(n)) errors.push(`side "${side.id}": nation "${n}" is not listed in scenario nations`);
+      if (nationSide.has(n)) errors.push(`nation "${n}" is on more than one side`);
+      nationSide.set(n, side.id);
+    }
+  }
+  for (const n of s.nations) if (!nationSide.has(n)) errors.push(`nation "${n}" is not on any side`);
+
+  for (const n of s.supply.nodes) {
+    if (n.side !== undefined && !sideIds.has(n.side)) errors.push(`supply node "${n.id}": side "${n.side}" is not a side`);
+    if (n.side === undefined && sideSpecs.length > 1) errors.push(`supply node "${n.id}": needs a side`);
+  }
+
+  const objectiveIds = dupes('objective', s.objectives.map((o) => o.id));
+  const objectives: ResolvedObjective[] = s.objectives.map((o) => {
+    if (o.holder !== undefined && !sideIds.has(o.holder)) errors.push(`objective "${o.id}": holder "${o.holder}" is not a side`);
+    return { ...o, position: resolvePos(o.position, `objective "${o.id}"`, true) };
+  });
+
+  const sides: ResolvedSide[] = sideSpecs.map((side) => {
+    const { ai, ...rest } = side;
+    if (!ai) return rest;
+    const where = `side "${side.id}" ai`;
+    const resolved: ResolvedAi = { posture: ai.posture, competence: ai.competence };
+    if (ai.posture === 'offensive' && !ai.offensive) errors.push(`${where}: offensive posture needs an offensive plan`);
+    if (ai.posture === 'defensive' && !ai.defensive) errors.push(`${where}: defensive posture needs defensive settings`);
+    if (ai.offensive) {
+      const o = ai.offensive;
+      if (o.latestDay < o.earliestDay) errors.push(`${where}: latestDay is before earliestDay`);
+      resolved.offensive = {
+        ...o,
+        plans: o.plans.map((p, i) => {
+          const pw = `${where}.plans.${i}`;
+          if (!hasChildren.has(p.corps)) errors.push(`${pw}: "${p.corps}" is not a formation with children`);
+          for (const obj of p.objectives) if (!objectiveIds.has(obj)) errors.push(`${pw}: objective "${obj}" does not exist`);
+          if (p.depot !== undefined && !s.supply.nodes.some((n) => n.id === p.depot && n.mobile)) {
+            errors.push(`${pw}: depot "${p.depot}" is not a mobile supply node`);
+          }
+          return { ...p, assembly: resolvePos(p.assembly, `${pw}.assembly`, true) };
+        }),
+      };
+    }
+    if (ai.defensive) {
+      const d = ai.defensive;
+      for (const r of d.reserves) if (!hasChildren.has(r)) errors.push(`${where}: reserve "${r}" is not a formation with children`);
+      for (const obj of d.withdrawWhenLost) if (!objectiveIds.has(obj)) errors.push(`${where}: objective "${obj}" does not exist`);
+      resolved.defensive = { ...d, withdrawTo: resolvePos(d.withdrawTo, `${where}.withdrawTo`, true) };
+    }
+    return { ...rest, ai: resolved };
+  });
+
   if (errors.length > 0) return { ok: false, errors };
   return {
     ok: true,
     value: {
-      scenario: { ...s, formations, supply: { nodes, links: s.supply.links }, events },
+      scenario: { ...s, formations, supply: { nodes, links: s.supply.links }, events, sides, objectives },
       units: catalog.units,
       nations: catalog.nations,
       map,

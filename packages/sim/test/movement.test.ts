@@ -30,7 +30,7 @@ function wallTerrain(fill = '.'): TerrainGrid {
   const rows = [0, 1, 2, 3, 4, 5].map((r) =>
     [...Array(10).keys()].map((c) => (c === 4 && r < 5 ? '~' : c === 7 ? '^' : fill)).join(''),
   );
-  return { cellKm: 10, cols: 10, rows: 6, cells: rows.join(''), speeds: { '.': 1000, '^': 500, '~': 0 } };
+  return { cellKm: 10, cols: 10, rows: 6, cells: rows.join(''), speeds: { '.': 1000, '^': 500, '~': 0 }, defense: { '.': 1000, '^': 1300, '~': 1000 } };
 }
 
 function withTerrain(terrain: TerrainGrid): WorldState {

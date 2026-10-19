@@ -2,13 +2,18 @@ import type { Position } from '@tow/content';
 import type { WorldState } from './world.ts';
 import { aggregate, expand, frontier } from '../command/formations.ts';
 import { issueMove } from '../command/movement.ts';
+import { moveDepot } from '../supply/depots.ts';
+import type { AirAllocation, OrderKind } from './world.ts';
 
 /** Intents sent into the sim. */
 export type Command =
   | { type: 'expand'; formation: string }
   | { type: 'aggregate'; formation: string }
-  | { type: 'move'; formation: string; to: Position }
+  | { type: 'move'; formation: string; to: Position; kind?: OrderKind }
   | { type: 'halt'; formation: string }
+  | { type: 'moveDepot'; node: string; to: Position }
+  | { type: 'setAirAllocation'; side: string; allocation: AirAllocation }
+  | { type: 'setAiControl'; side: string; controlled: boolean }
   | { type: 'setDisrupted'; target: { kind: 'node' | 'link'; id: string }; disrupted: boolean };
 
 export type TimedCommand = Command & { tick: number };
@@ -29,10 +34,10 @@ export function applyCommand(world: WorldState, cmd: Command): void {
             y: order.destination.y + part.position.y - f.position.y,
           };
           try {
-            issueMove(world, part.id, to);
+            issueMove(world, part.id, to, order.kind);
           } catch {
             try {
-              issueMove(world, part.id, order.destination);
+              issueMove(world, part.id, order.destination, order.kind);
             } catch {
               // Can't get there either way: the part stays put.
             }
@@ -42,8 +47,29 @@ export function applyCommand(world: WorldState, cmd: Command): void {
       return;
     }
     case 'move':
-      issueMove(world, cmd.formation, cmd.to);
+      issueMove(world, cmd.formation, cmd.to, cmd.kind ?? 'move');
       return;
+    case 'moveDepot':
+      moveDepot(world, cmd.node, cmd.to);
+      return;
+    case 'setAirAllocation': {
+      const air = world.sides[cmd.side]?.air;
+      if (!air) throw new Error(`setAirAllocation: side "${cmd.side}" has no air power`);
+      const a = cmd.allocation;
+      const parts = [a.counterAir, a.interdiction, a.attrition, a.support];
+      if (parts.some((p) => !Number.isInteger(p) || p < 0) || parts.reduce((x, y) => x + y, 0) !== 1000) {
+        throw new Error('setAirAllocation: shares must be whole permille summing to 1000');
+      }
+      air.allocation = { ...a };
+      return;
+    }
+    case 'setAiControl': {
+      const ai = world.sides[cmd.side]?.ai;
+      if (!ai) throw new Error(`setAiControl: side "${cmd.side}" has no AI`);
+      ai.controlled = cmd.controlled;
+      ai.nextDecisionTick = world.tick;
+      return;
+    }
     case 'halt': {
       const f = world.formations[cmd.formation];
       if (!f) throw new Error(`halt: unknown formation "${cmd.formation}"`);

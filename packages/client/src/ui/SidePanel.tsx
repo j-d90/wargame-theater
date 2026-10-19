@@ -2,7 +2,15 @@ import type { FormationSummary, WorldSummary } from '@tow/sim';
 import { sim } from '../state/sim.ts';
 import { focusOn, select, store, useApp } from '../state/store.ts';
 import { statusColor } from '../views/theater/style.ts';
-import { capitalize, daysOfSupply, pct } from './format.ts';
+import { calendarDate, capitalize, daysOfSupply, pct } from './format.ts';
+import { AIR_KEYS, rebalance, type AirKey } from './allocation.ts';
+
+const AIR_LABELS: Record<AirKey, string> = {
+  counterAir: 'Counter-air',
+  interdiction: 'Interdiction',
+  attrition: 'Strikes on units',
+  support: 'Close support',
+};
 
 const css = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
 
@@ -31,8 +39,19 @@ function Stat({ label, value }: { label: string; value: string | number }) {
 
 const COLLAPSIBLE = new Set(['corps', 'division', 'brigade', 'battalion']);
 
+const STATUS: Record<FormationSummary['status'], string> = {
+  active: 'Active',
+  retreating: 'Falling back',
+  surrendered: 'Surrendered',
+  destroyed: 'Destroyed',
+};
+
 function FormationPanel({ f, summary }: { f: FormationSummary; summary: WorldSummary }) {
   const mode = useApp((s) => s.mode);
+  const playerSide = useApp((s) => s.playerSide);
+  const side = summary.sides.find((x) => x.id === f.side);
+  // With opposing sides you only command your own; enemy units can be inspected.
+  const commandable = playerSide === null || f.side === playerSide;
   const node = summary.nodes.find((n) => n.id === f.supplyNode);
   const remaining = f.path.reduce(
     (acc, wp) => ({ km: acc.km + Math.hypot(wp.x - acc.at.x, wp.y - acc.at.y), at: wp }),
@@ -54,7 +73,19 @@ function FormationPanel({ f, summary }: { f: FormationSummary; summary: WorldSum
           {f.branch ? ` · ${f.branch}` : ''}
           {f.aggregated ? ' · aggregated' : ''}
         </span>
+        {summary.sides.length > 1 && side && (
+          <span className="side-tag" style={{ background: side.color }}>
+            {side.name}
+          </span>
+        )}
       </div>
+      {summary.sides.length > 1 && (
+        <p className={`status ${f.inContact ? 'warn' : ''}`}>
+          {STATUS[f.status]}
+          {f.inContact ? ' · in contact with the enemy' : ''}
+          {f.fortification > 0 ? ` · dug in ${pct(f.fortification)}` : ''}
+        </p>
+      )}
       <p className={`status ${f.path.length > 0 && f.kmPerDay === 0 ? 'warn' : ''}`}>{status}</p>
       {!f.inSupplyRange && (
         <p className="alert">
@@ -70,24 +101,28 @@ function FormationPanel({ f, summary }: { f: FormationSummary; summary: WorldSum
         <Stat label="Combat power" value={f.combatPower} />
         <Stat label="Mobility" value={pct(f.mobility)} />
         <Stat label="Pace now" value={`${f.kmPerDay} km/d`} />
+        {summary.sides.length > 1 && <Stat label="Quality" value={pct(f.quality)} />}
+        {summary.sides.length > 1 && <Stat label="Losses" value={`${pct(((f.establishment - f.strength) * 1000) / Math.max(1, f.establishment))}`} />}
       </div>
       <div className="supply-source">
         Draws from <button className="link" onClick={() => node && (select({ kind: 'node', id: node.id }), focusOn(node.position))}>{node?.name ?? '—'}</button>
         {f.supplyDistanceKm !== null && ` · ${f.supplyDistanceKm} km`}
       </div>
 
-      <div className="actions">
-        <button className={mode === 'move' ? 'primary active' : 'primary'} onClick={() => store.set({ mode: mode === 'move' ? 'select' : 'move' })} title="Then click the map (M)">
-          {mode === 'move' ? 'Click destination…' : 'Move'}
-        </button>
-        <button disabled={f.path.length === 0} onClick={() => sim.send({ type: 'halt', formation: f.id })} title="Stop where it is (H)">
-          Halt
-        </button>
-        {f.hasChildren && f.aggregated && <button onClick={() => sim.send({ type: 'expand', formation: f.id })}>Expand</button>}
-        {f.parentId && f.parentEchelon && COLLAPSIBLE.has(f.parentEchelon) && (
-          <button onClick={() => sim.send({ type: 'aggregate', formation: f.parentId! })}>Collapse into {f.parentName}</button>
-        )}
-      </div>
+      {commandable && (
+        <div className="actions">
+          <button className={mode === 'move' ? 'primary active' : 'primary'} onClick={() => store.set({ mode: mode === 'move' ? 'select' : 'move' })} title="Then click the map (M)">
+            {mode === 'move' ? 'Click destination…' : 'Move'}
+          </button>
+          <button disabled={f.path.length === 0} onClick={() => sim.send({ type: 'halt', formation: f.id })} title="Stop where it is (H)">
+            Halt
+          </button>
+          {f.hasChildren && f.aggregated && <button onClick={() => sim.send({ type: 'expand', formation: f.id })}>Expand</button>}
+          {f.parentId && f.parentEchelon && COLLAPSIBLE.has(f.parentEchelon) && (
+            <button onClick={() => sim.send({ type: 'aggregate', formation: f.parentId! })}>Collapse into {f.parentName}</button>
+          )}
+        </div>
+      )}
     </section>
   );
 }
@@ -165,16 +200,88 @@ function LinkPanel({ id, summary }: { id: string; summary: WorldSummary }) {
   );
 }
 
+function Campaign({ summary }: { summary: WorldSummary }) {
+  const playerSide = useApp((s) => s.playerSide);
+  const mine = summary.sides.find((s) => s.id === playerSide);
+  const names = new Map(summary.sides.map((s) => [s.id, s]));
+  const air = mine?.air;
+  const aiRuns = mine?.ai?.controlled ?? false;
+  return (
+    <>
+      <h3>Forces</h3>
+      {summary.sides.map((s) => (
+        <div key={s.id} className="side-row">
+          <span className="side-tag" style={{ background: s.color }}>
+            {s.name}
+          </span>
+          <Bar label="Combat power" permille={s.combatPowerRatio} />
+          <div className="side-stats">
+            {s.formations} formations · lost {s.losses} · surrendered {s.surrendered}
+            {s.air ? ` · air force ${pct(s.air.pool)}, superiority ${pct(s.air.superiority)}` : ''}
+            {s.ai?.controlled ? ` · AI: ${s.ai.phase}` : ''}
+          </div>
+        </div>
+      ))}
+      <h3>Objectives</h3>
+      <ul className="list">
+        {summary.objectives.map((o) => {
+          const holder = o.holder ? names.get(o.holder) : undefined;
+          return (
+            <li key={o.id}>
+              <button className="link" onClick={() => focusOn(o.position)}>
+                {o.name}
+              </button>
+              <span style={{ color: holder?.color }}>
+                {holder?.name ?? '—'}
+                {o.capturedTick !== null ? ` (${calendarDate(summary.startDate, Math.floor(o.capturedTick / 96)) ?? `day ${Math.floor(o.capturedTick / 96)}`})` : ''}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      {mine?.ai && (
+        <label className="toggle">
+          <input type="checkbox" checked={aiRuns} onChange={(e) => sim.send({ type: 'setAiControl', side: mine.id, controlled: e.target.checked })} />
+          AI commands the {mine.name} (watch it auto-resolve)
+        </label>
+      )}
+      {air && (
+        <>
+          <h3>{mine.name} air effort · {air.sorties} sorties today</h3>
+          {AIR_KEYS.map((k) => (
+            <div key={k} className="slider">
+              <span>{AIR_LABELS[k]}</span>
+              <input
+                type="range"
+                min={0}
+                max={1000}
+                step={50}
+                value={air.allocation[k]}
+                disabled={aiRuns}
+                onChange={(e) => sim.send({ type: 'setAirAllocation', side: mine.id, allocation: rebalance(air.allocation, k, Number(e.target.value)) })}
+              />
+              <span className="value">{pct(air.allocation[k])}</span>
+            </div>
+          ))}
+          {aiRuns && <p className="muted">The AI is setting the air effort.</p>}
+        </>
+      )}
+    </>
+  );
+}
+
 function Overview({ summary }: { summary: WorldSummary }) {
   const description = useApp((s) => s.scenario?.description ?? '');
-  const units = [...summary.active].sort((a, b) => a.name.localeCompare(b.name));
+  const playerSide = useApp((s) => s.playerSide);
+  const units = summary.active.filter((f) => playerSide === null || f.side === playerSide).sort((a, b) => a.name.localeCompare(b.name));
   return (
     <section className="panel-body">
       <p className="muted">{description}</p>
       <p className="help">
         Click a unit, depot, or supply line to inspect it. Drag to pan, scroll or pinch to zoom. <kbd>Space</kbd> pauses, <kbd>1</kbd>–<kbd>3</kbd> set speed.
       </p>
-      <h3>Formations</h3>
+      {summary.sides.length > 1 && <Campaign summary={summary} />}
+      <h3>{summary.sides.length > 1 ? 'Your formations' : 'Formations'}</h3>
       <ul className="list">
         {units.map((f) => (
           <li key={f.id}>

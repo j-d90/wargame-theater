@@ -34,12 +34,17 @@ export function hasAggregatedAncestor(world: WorldState, id: string): boolean {
   return false;
 }
 
-export function isActive(world: WorldState, id: string): boolean {
-  const f = get(world, id);
-  return (f.aggregated || f.childIds.length === 0) && !hasAggregatedAncestor(world, id);
+/** Still in the fight: not surrendered or destroyed. */
+export function alive(f: Formation): boolean {
+  return f.status === 'active' || f.status === 'retreating';
 }
 
-/** All active formations, sorted by id. */
+export function isActive(world: WorldState, id: string): boolean {
+  const f = get(world, id);
+  return (f.aggregated || f.childIds.length === 0) && alive(f) && !hasAggregatedAncestor(world, id);
+}
+
+/** All active (simulated and alive) formations, sorted by id. */
 export function activeFormations(world: WorldState): Formation[] {
   return sortedIds(world.formations)
     .filter((id) => isActive(world, id))
@@ -70,7 +75,17 @@ export function effectiveSupplyNode(world: WorldState, id: string): string | nul
 
 /** Combine stats: sum extensive ones, strength-weighted average (rounded) for intensive ones. */
 export function combineStats(parts: readonly FormationStats[]): FormationStats {
-  const out: FormationStats = { strength: 0, readiness: 0, morale: 0, stock: 0, stockCap: 0, supplyPerTick: 0, speed: 0 };
+  const out: FormationStats = {
+    strength: 0,
+    establishment: 0,
+    quality: 1000,
+    readiness: 0,
+    morale: 0,
+    stock: 0,
+    stockCap: 0,
+    supplyPerTick: 0,
+    speed: 0,
+  };
   for (const key of EXTENSIVE_STATS) {
     for (const p of parts) out[key] += p[key];
   }
@@ -87,8 +102,18 @@ export function combineStats(parts: readonly FormationStats[]): FormationStats {
       out[key] = Math.floor((sum + Math.floor(parts.length / 2)) / parts.length);
     }
   }
-  if (parts.length > 0) out.speed = Math.min(...parts.map((p) => p.speed));
+  if (parts.length > 0) {
+    out.speed = Math.min(...parts.map((p) => p.speed));
+    out.quality = weightedMean(parts.map((p) => [p.quality, p.strength]));
+  }
   return out;
+}
+
+/** Strength-weighted mean of [value, weight] pairs, rounded; plain mean if all weights are 0. */
+function weightedMean(pairs: [number, number][]): number {
+  const total = pairs.reduce((a, [, w]) => a + w, 0);
+  if (total === 0) return Math.round(pairs.reduce((a, [v]) => a + v, 0) / pairs.length);
+  return Math.round(pairs.reduce((a, [v, w]) => a + v * w, 0) / total);
 }
 
 /** Current stats of any formation, computed from whatever represents its subtree. */
@@ -131,6 +156,10 @@ export function aggregate(world: WorldState, id: string): void {
   }
   f.position = { x: wx / w, y: wy / w };
   f.branch = parts.every((p) => p.branch === parts[0]!.branch) ? parts[0]!.branch : null;
+  f.fortification = weightedMean(parts.map((p) => [p.fortification, p.stats.strength]));
+  f.inContact = parts.some((p) => p.inContact);
+  f.status = parts.some((p) => p.status === 'active') ? 'active' : 'retreating';
+  for (const p of parts) p.lossCarry = 0;
   f.baselinePosition = { ...f.position };
   f.stats = stats;
   f.baseline = { ...stats };
@@ -149,6 +178,7 @@ export function aggregate(world: WorldState, id: string): void {
 export function expand(world: WorldState, id: string): void {
   const f = get(world, id);
   if (!f.aggregated || f.baseline === null || f.baselinePosition === null) throw new Error(`expand: "${id}" is not aggregated`);
+  if (!alive(f)) throw new Error(`expand: "${id}" is no longer in the fight`);
   if (hasAggregatedAncestor(world, id)) throw new Error(`expand: "${id}" is hidden inside an aggregated ancestor`);
   const parts = childFrontier(world, f);
   const now = f.stats;
@@ -157,6 +187,7 @@ export function expand(world: WorldState, id: string): void {
   const split = (key: (typeof EXTENSIVE_STATS)[number], caps?: number[]) =>
     distribute(now[key], parts.map((p) => p.stats[key]), caps);
   const strength = split('strength');
+  const establishment = split('establishment');
   const stockCap = split('stockCap');
   const supplyPerTick = split('supplyPerTick');
   const stock = split('stock', stockCap);
@@ -167,6 +198,9 @@ export function expand(world: WorldState, id: string): void {
     p.position = { x: p.position.x + dx, y: p.position.y + dy };
     const s = p.stats;
     s.strength = strength[i]!;
+    s.establishment = establishment[i]!;
+    p.fortification = f.fortification;
+    if (alive(p)) p.status = f.status;
     s.stockCap = stockCap[i]!;
     s.supplyPerTick = supplyPerTick[i]!;
     s.stock = stock[i]!;

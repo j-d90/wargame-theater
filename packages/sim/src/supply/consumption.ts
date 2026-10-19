@@ -9,6 +9,11 @@ import { supplyLevel } from '../command/derived.ts';
 
 const clamp = (v: number) => Math.max(0, Math.min(1000, v));
 
+/** How high morale can recover by rest alone; better units rally further. */
+export function moraleCeiling(quality: number): number {
+  return Math.min(1000, 450 + quality / 4);
+}
+
 export function consumptionPhase(world: WorldState): void {
   const r = world.rules;
   for (const f of activeFormations(world)) {
@@ -25,6 +30,8 @@ export function consumptionPhase(world: WorldState): void {
     } else {
       s.readiness = clamp(s.readiness + r.readinessRecovery);
     }
-    if (!empty && level >= r.moraleRecoveryThreshold) s.morale = clamp(s.morale + r.moraleRecovery);
+    if (!empty && !f.inContact && level >= r.moraleRecoveryThreshold && s.morale < moraleCeiling(s.quality)) {
+      s.morale = Math.min(moraleCeiling(s.quality), s.morale + r.moraleRecovery);
+    }
   }
 }

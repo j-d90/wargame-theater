@@ -3,6 +3,6 @@ import { sim } from './state/sim.ts';
 import { App } from './ui/App.tsx';
 import './ui/styles.css';
 
-const scenario = new URLSearchParams(location.search).get('scenario') ?? 'gulf-sandbox';
+const scenario = new URLSearchParams(location.search).get('scenario') ?? 'desert-storm';
 sim.load(scenario);
 createRoot(document.getElementById('app')!).render(<App />);
