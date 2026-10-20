@@ -48,6 +48,13 @@ const CLASSES = [
   { code: '~', name: 'water', speed: 0, defense: 1000 },
 ];
 
+// Countries tracked cell by cell: [Natural Earth ADM0_A3, cell code, region id].
+const REGIONS: [string, string, string][] = [
+  ['IRQ', 'i', 'iraq'],
+  ['KWT', 'k', 'kuwait'],
+  ['SAU', 's', 'saudi-arabia'],
+];
+
 // ---------------------------------------------------------------- downloads
 
 async function cached(name: string, url: string): Promise<Buffer> {
@@ -291,6 +298,21 @@ async function main() {
   for (const code of cells) counts[code] = (counts[code] ?? 0) + 1;
   console.log(`  terrain ${cols}x${rows}:`, counts);
 
+  // Country of each terrain cell, for rules such as mandates and who will cross which border.
+  const toCells = (rings: Ring[]): Ring[] =>
+    rings.map((ring) =>
+      ring.map(([lon, lat]) => {
+        const { x, y } = latLonToXY(frame, lat!, lon!);
+        return [x / CELL_KM, y / CELL_KM];
+      }),
+    );
+  const regionMask = new Uint8Array(cols * rows);
+  REGIONS.forEach(([a3], i) => {
+    const polys = countries.filter((f) => f.properties['ADM0_A3'] === a3).flatMap(polygons).map(toCells);
+    fillPolygons(regionMask, cols, rows, polys, i + 1);
+  });
+  const regionCells = [...regionMask].map((v, i) => (cells[i] === '~' || v === 0 ? '.' : REGIONS[v - 1]![1])).join('');
+
   mkdirSync(OUT, { recursive: true });
   writeFileSync(
     join(OUT, 'terrain.json'),
@@ -302,6 +324,7 @@ async function main() {
       widthKm: WIDTH_KM,
       heightKm: HEIGHT_KM,
       terrain: { cellKm: CELL_KM, cols, rows, classes: CLASSES, cells: cells.join('') },
+      regions: { names: Object.fromEntries(REGIONS.map(([, code, name]) => [code, name])), cells: regionCells },
     }) + '\n',
   );
 

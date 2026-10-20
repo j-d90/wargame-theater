@@ -6,19 +6,19 @@ const total = (a: AirAllocation) => AIR_KEYS.reduce((s, k) => s + a[k], 0);
 
 describe('air allocation rebalance', () => {
   it('keeps the total at 1000 and the other shares in proportion', () => {
-    const a = rebalance({ counterAir: 500, interdiction: 250, attrition: 250, support: 0 }, 'support', 500);
-    expect(a).toEqual({ counterAir: 250, interdiction: 125, attrition: 125, support: 500 });
+    const a = rebalance({ counterAir: 500, interdiction: 250, attrition: 250, support: 0, scudHunt: 0, strategic: 0 }, 'support', 500);
+    expect(a).toEqual({ counterAir: 250, interdiction: 125, attrition: 125, support: 500, scudHunt: 0, strategic: 0 });
   });
 
   it('spreads evenly when the others are all zero', () => {
-    const a = rebalance({ counterAir: 1000, interdiction: 0, attrition: 0, support: 0 }, 'counterAir', 400);
+    const a = rebalance({ counterAir: 1000, interdiction: 0, attrition: 0, support: 0, scudHunt: 0, strategic: 0 }, 'counterAir', 400);
     expect(total(a)).toBe(1000);
-    expect(a.interdiction).toBe(200);
+    expect(a.interdiction).toBe(120);
   });
 
   it('clamps and always sums to 1000', () => {
     for (const v of [-50, 0, 333, 999, 1000, 1500]) {
-      expect(total(rebalance({ counterAir: 100, interdiction: 200, attrition: 300, support: 400 }, 'attrition', v))).toBe(1000);
+      expect(total(rebalance({ counterAir: 100, interdiction: 200, attrition: 300, support: 400, scudHunt: 0, strategic: 0 }, 'attrition', v))).toBe(1000);
     }
   });
 });

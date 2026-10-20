@@ -61,11 +61,21 @@ export const GameMapSchema = z
       /** One class code per cell, row by row from the north-west corner. */
       cells: z.string(),
     }),
+    /** Country of each terrain cell ('.' for none), on the same grid. */
+    regions: z
+      .object({
+        names: z.record(z.string().length(1), id),
+        cells: z.string(),
+      })
+      .optional(),
   })
   .superRefine((m, ctx) => {
     const t = m.terrain;
     if (t.cells.length !== t.cols * t.rows) {
       ctx.addIssue({ code: 'custom', path: ['terrain', 'cells'], message: `expected ${t.cols * t.rows} cells, got ${t.cells.length}` });
+    }
+    if (m.regions && m.regions.cells.length !== t.cols * t.rows) {
+      ctx.addIssue({ code: 'custom', path: ['regions', 'cells'], message: `expected ${t.cols * t.rows} region cells` });
     }
     const codes = new Set(t.classes.map((c) => c.code));
     const unknown = [...new Set(t.cells)].filter((c) => !codes.has(c));
@@ -211,10 +221,34 @@ export const OffensivePlanSchema = z.object({
 });
 export type OffensivePlan = z.infer<typeof OffensivePlanSchema>;
 
+/** How a side's strategic AI behaves; the knobs the M4 experiments turn. */
+export const StrategyAiSpecSchema = z.object({
+  /** Answer enemy missile strikes on neutrals (hunt launchers, send Patriots, press for restraint), or ignore them. */
+  scudResponse: z.enum(['historical', 'ignore']).default('historical'),
+  /** Share of air effort for missile-launcher hunting while missiles are flying, permille. */
+  scudHuntShare: permille.default(120),
+  /** Share of air effort for strategic bombing, permille. */
+  strategicBombing: permille.default(0),
+  /** Keep going past the mandate after liberation instead of declaring a cease-fire. */
+  pursueAfterLiberation: z.boolean().default(false),
+  /** Extra objectives per command when pursuing. */
+  pursuit: z.array(z.object({ corps: id, objectives: z.array(id).min(1) })).default([]),
+  /** Hours after the cease-fire conditions are met before declaring it. */
+  ceasefireAfterHours: nonNegInt.default(24),
+  /** Weights for choosing missile targets, by target id. */
+  scudTargets: z.record(id, nonNegInt).default({}),
+  /** Strategic actions to take on their own, from a given day. */
+  useActions: z.array(z.object({ action: id, fromDay: nonNegInt, whenWithdrawing: z.boolean().default(false) })).default([]),
+  /** Withdraw once the regime's stability falls below this (permille). */
+  withdrawWhenStabilityBelow: permille.optional(),
+});
+export type StrategyAiSpec = z.infer<typeof StrategyAiSpecSchema>;
+
 export const AiSpecSchema = z.object({
   posture: z.enum(['offensive', 'defensive']),
   /** 0..1000. Lower competence decides less often and reacts to less. */
   competence: permille.default(700),
+  strategy: StrategyAiSpecSchema.optional(),
   offensive: z
     .object({
       /** The ground offensive starts no earlier than this day... */
@@ -252,6 +286,166 @@ export const SideSpecSchema = z.object({
 });
 export type SideSpec = z.infer<typeof SideSpecSchema>;
 
+// ---------------------------------------------------------------- strategic layer
+
+/** Changes to actors' gauges, by actor id. Permille points. */
+export const EffectsSchema = z.object({
+  support: z.record(id, z.number()).default({}),
+  cohesion: z.record(id, z.number()).default({}),
+  patience: z.record(id, z.number()).default({}),
+  stability: z.record(id, z.number()).default({}),
+  /** Change to the acting side's political capital. */
+  capital: z.number().default(0),
+});
+export type Effects = z.infer<typeof EffectsSchema>;
+
+export const ActorSpecSchema = z.object({
+  id,
+  /** Shown by role ("US government"), never by a living person's name. */
+  name: z.string().min(1),
+  /** Side the actor belongs to; absent for neutrals. */
+  side: id.optional(),
+  /** Formations of these nations answer to this actor. */
+  nations: z.array(id).default([]),
+  /** Home public support (democracies), permille. */
+  support: permille.optional(),
+  /** Commitment to the coalition, permille. */
+  cohesion: permille.optional(),
+  /** A neutral's restraint, permille. At zero it intervenes. */
+  patience: permille.optional(),
+  /** Regime stability, permille. */
+  stability: permille.optional(),
+  /** Pulls its forces out when cohesion falls below this. */
+  withdrawBelow: permille.optional(),
+  /** Its forces will not be sent into these regions (a legal limit, enforced in realistic mode). */
+  refusesRegions: z.array(id).default([]),
+  /** For a neutral: the side it attacks when it intervenes, and what that does. */
+  interveneAgainst: id.optional(),
+  onIntervene: EffectsSchema.optional(),
+  /** What its withdrawal does to the others. */
+  onWithdraw: EffectsSchema.optional(),
+  /** Share of its side's air effort flown from its bases, lost if it withdraws (permille). */
+  hostsAirPermille: permille.default(0),
+  /** Supply sources on its territory (ports) that lose capacity if it withdraws... */
+  restrictsSources: z.array(id).default([]),
+  /** ...down to this share of their production, permille. */
+  restrictedTo: permille.default(1000),
+});
+export type ActorSpec = z.infer<typeof ActorSpecSchema>;
+
+export const StrategicActionSpecSchema = z.object({
+  id,
+  name: z.string().min(1),
+  side: id,
+  description: z.string().min(1),
+  /**
+   * What the action does beyond its effects: 'generic' (effects only), 'pressure' (adds patience to `target`),
+   * 'deploy-patriots' (Patriot batteries to missile target `target`), 'declare-ceasefire', 'pursue'
+   * (press on past the mandate; enemy forces rally to defend their homeland),
+   * 'oil-fires', 'countervalue'.
+   */
+  kind: z.enum(['generic', 'pressure', 'deploy-patriots', 'declare-ceasefire', 'pursue', 'oil-fires', 'countervalue']),
+  target: id.optional(),
+  /** 0 (routine) to 5 (extreme). Shown to the player; locks apply to the dangerous rungs. */
+  escalation: z.number().int().min(0).max(5).default(0),
+  lockedInRealistic: z.boolean().default(false),
+  lockReason: z.string().optional(),
+  cost: nonNegInt.default(0),
+  cooldownDays: nonNegInt.default(0),
+  oneShot: z.boolean().default(false),
+  requires: z
+    .object({
+      objectivesHeld: z.array(id).default([]),
+      minDay: nonNegInt.default(0),
+    })
+    .default({ objectivesHeld: [], minDay: 0 }),
+  effects: EffectsSchema.default({ support: {}, cohesion: {}, patience: {}, stability: {}, capital: 0 }),
+});
+export type StrategicActionSpec = z.infer<typeof StrategicActionSpecSchema>;
+
+export const MissileTargetSpecSchema = z.object({
+  id,
+  name: z.string().min(1),
+  kind: z.enum(['city', 'military']),
+  /** May lie beyond the map edge. */
+  position: PositionSchema,
+  onHit: EffectsSchema,
+  onIntercept: EffectsSchema,
+});
+export type MissileTargetSpec = z.infer<typeof MissileTargetSpecSchema>;
+
+export const StrategyRulesSchema = z.object({
+  patienceRecoveryPerDay: z.number().default(10),
+  /** Support lost per permille of a side's strength lost in a day. */
+  supportPerLossPermille: z.number().default(3),
+  supportFatiguePerDay: z.number().default(2),
+  /** Support gained per objective point captured. */
+  supportPerObjectivePoint: z.number().default(0.5),
+  /** Support and Arab cohesion lost per 100 effective strategic-bombing sorties (civilian harm). */
+  civilianHarmPer100Sorties: z.number().default(1),
+  stabilityPerLossPermille: z.number().default(1),
+  stabilityPer100StrategicSorties: z.number().default(2),
+  /** Industry destroyed per 100 effective strategic sorties (permille, diminishing) and repaired per day. */
+  industryPer100Sorties: z.number().default(20),
+  industryRepairPerDay: z.number().default(5),
+  /** Support lost per permille of the enemy's strength destroyed while retreating, after liberation. */
+  supportPerRetreatKillPermille: z.number().default(2),
+  /** Effective hunting sorties for half suppression of missile launches. */
+  scudHalfSuppressionSorties: z.number().default(150),
+  /** Share of suppressed launchers destroyed per day, permille. */
+  scudKillPerDay: z.number().default(40),
+  capitalPerDay: z.number().default(5),
+});
+export type StrategyRules = z.infer<typeof StrategyRulesSchema>;
+
+export const StrategySpecSchema = z.object({
+  mode: z.enum(['realistic', 'sandbox']).default('realistic'),
+  capital: z.record(id, nonNegInt).default({}),
+  actors: z.array(ActorSpecSchema).min(1),
+  actions: z.array(StrategicActionSpecSchema).default([]),
+  missiles: z
+    .object({
+      side: id,
+      launchers: nonNegInt,
+      launchesPerLauncherPerDay: z.number().nonnegative(),
+      launchArea: PositionSchema,
+      targets: z.array(MissileTargetSpecSchema).min(1),
+      patriots: z.object({
+        side: id,
+        batteries: nonNegInt,
+        interceptPerBattery: permille,
+        maxIntercept: permille,
+        /** Starting deployment, by target id. */
+        at: z.record(id, nonNegInt).default({}),
+      }),
+    })
+    .optional(),
+  mandate: z
+    .object({
+      side: id,
+      /** Regions the side's forces may not enter under the mandate... */
+      forbiddenRegions: z.array(id),
+      /** ...except south of this latitude. */
+      allowedSouthOfLat: z.number().optional(),
+      /** Cohesion each of these actors loses per day for each formation beyond the mandate. */
+      cohesionPerFormationDay: z.record(id, z.number()).default({}),
+    })
+    .optional(),
+  ceasefire: z
+    .object({
+      side: id,
+      /** Objectives whose holding counts as liberation. */
+      requires: z.array(id).min(1),
+      /** Public pressure forces a cease-fire after liberation once any of the side's support falls below this. */
+      forceWhenSupportBelow: permille.default(500),
+    })
+    .optional(),
+  /** Oil fields that burn if set alight. */
+  oilFields: z.array(z.object({ name: z.string(), position: PositionSchema })).default([]),
+  rules: StrategyRulesSchema.default(StrategyRulesSchema.parse({})),
+});
+export type StrategySpec = z.infer<typeof StrategySpecSchema>;
+
 export const ScenarioSchema = z.object({
   id,
   name: z.string().min(1),
@@ -265,6 +459,7 @@ export const ScenarioSchema = z.object({
   /** Opposing sides. Without them every nation is on one side and nothing fights. */
   sides: z.array(SideSpecSchema).optional(),
   objectives: z.array(ObjectiveSpecSchema).default([]),
+  strategy: StrategySpecSchema.optional(),
   nations: z.array(id).min(1),
   formations: z.array(FormationSpecSchema).min(1),
   supply: z.object({

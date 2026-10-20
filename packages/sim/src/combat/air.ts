@@ -7,6 +7,7 @@ import { TICKS_PER_DAY } from '../core/time.ts';
 import { sortedIds, type Formation, type WorldState } from '../core/world.ts';
 import { activeFormations } from '../command/formations.ts';
 import { damage, moraleFactor } from './aggregate.ts';
+import { ceasefireInForce } from '../strategy/strategic.ts';
 
 const sidesWithAir = (world: WorldState) => sortedIds(world.sides).filter((id) => world.sides[id]!.air);
 
@@ -45,18 +46,21 @@ export function dailyAirPhase(world: WorldState): void {
 
 /** Air strikes are spread evenly over the day's ticks. */
 export function airPhase(world: WorldState): void {
+  if (ceasefireInForce(world)) return;
   const r = world.rules;
   const units = activeFormations(world);
   for (const id of sidesWithAir(world)) {
     const air = world.sides[id]!.air!;
     const effect = (air.sorties * air.quality * air.superiority) / (1000 * 1000 * TICKS_PER_DAY);
 
-    // Attrition: spread over enemy formations in proportion to their strength.
+    // Attrition: spread over enemy formations by strength x quality^1.5, so
+    // the best enemy units (the most dangerous) draw most of the strikes.
     const targets = units.filter((f) => f.side !== id);
     const strikes = (effect * air.allocation.attrition) / 1000;
-    const totalStrength = targets.reduce((sum, t) => sum + t.stats.strength, 0);
-    if (strikes > 0 && totalStrength > 0) {
-      for (const t of targets) strike(world, t, (strikes * t.stats.strength) / totalStrength);
+    const weight = (t: Formation) => t.stats.strength * t.stats.quality * Math.sqrt(t.stats.quality);
+    const totalWeight = targets.reduce((sum, t) => sum + weight(t), 0);
+    if (strikes > 0 && totalWeight > 0) {
+      for (const t of targets) strike(world, t, (strikes * weight(t)) / totalWeight);
     }
 
     // Interdiction: aimed at enemy supply links in proportion to their capacity.

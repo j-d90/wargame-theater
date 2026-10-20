@@ -395,6 +395,39 @@ export class TheaterView {
       }
     }
 
+    // Burning oil fields: smoke over Kuwait.
+    if (sum.strategy?.oilFires != null) {
+      for (const f of sum.strategy.oilFields) {
+        for (const [dx, dy, r] of [[0, 0, 9], [6, -5, 7], [-5, -7, 6]] as const) {
+          g.circle(f.position.x + dx * s, f.position.y + dy * s, r * s).fill({ color: 0x1a1a1a, alpha: 0.55 });
+        }
+        g.circle(f.position.x, f.position.y, 3 * s).fill({ color: 0xff6a00 });
+      }
+    }
+
+    // Missile strikes from the last two days: arcs from the launch area, red if they got through.
+    const missiles = sum.strategy?.missiles;
+    if (missiles) {
+      const targets = new Map(missiles.targets.map((t) => [t.id, t.position]));
+      const from = missiles.launchArea;
+      for (const strike of missiles.recent) {
+        const to = targets.get(strike.target);
+        if (!to) continue;
+        const mx = (from.x + to.x) / 2;
+        const my = (from.y + to.y) / 2;
+        const len = Math.hypot(to.x - from.x, to.y - from.y);
+        // Bow the arc to the north so it reads as a ballistic path.
+        g.moveTo(from.x, from.y).quadraticCurveTo(mx, my - len * 0.25, to.x, to.y);
+        g.stroke({ width: 2 * s, color: strike.intercepted ? 0xb0b0b0 : COLORS.bad, alpha: 0.8 });
+        g.circle(to.x, to.y, 5 * s).fill({ color: strike.intercepted ? 0xb0b0b0 : COLORS.bad, alpha: 0.8 });
+      }
+      for (const t of missiles.targets) {
+        if (missiles.recent.some((r) => r.target === t.id) && this.occupancy.claim(labelRect(t.name, 11, t.position.x, t.position.y + 8 * s, 0, s, `mt:${t.id}`))) {
+          this.supplyLabels.place(`mt:${t.id}`, t.name, t.position.x, t.position.y + 8 * s, this.cam.scale, { size: 11, color: 0xffb3ad, bold: true });
+        }
+      }
+    }
+
     // Objectives: a diamond in the holder's colour.
     for (const o of sum.objectives) {
       const r = 8 * s;

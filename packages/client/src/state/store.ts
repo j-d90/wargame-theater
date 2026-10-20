@@ -21,6 +21,8 @@ export interface AppState {
   selection: Selection | null;
   mode: Mode;
   messages: Message[];
+  /** Which command level is on screen. */
+  view: 'theater' | 'strategic';
   /** Ask the map to centre on a point; `seq` changes on every request. */
   focus: { x: number; y: number; seq: number } | null;
 }
@@ -52,6 +54,7 @@ export const store = createStore<AppState>({
   speed: 0,
   selection: null,
   mode: 'select',
+  view: 'theater',
   messages: [],
   focus: null,
 });

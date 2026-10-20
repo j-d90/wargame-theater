@@ -10,7 +10,9 @@ The full design is in [docs/design.md](docs/design.md). Standing rules for contr
 - **M2 (theater map): complete.** A 2D map of Kuwait, Iraq and Saudi Arabia built from real terrain data. You can give divisions move orders (they pathfind around water and slow down in rough terrain), cut supply links and depots, and watch units downstream run out of supply.
 - **M3 (Desert Storm and theater AI): complete.** The 1991 campaign from 17 January to 28 February with division-level orders of battle for both sides, aggregate combat, abstract air power, objectives, and a theater AI for each side. Auto-resolve plays out the full campaign with plausible results; `npm run calibrate` checks this across 20 seeds.
 
-The next milestone is M4: the strategic layer (coalition cohesion, the Scud and Israel crisis, public opinion, escalation rules).
+- **M4 (strategic layer): complete.** Governments shown by role, each with gauges for public support, coalition commitment, Israeli patience or regime stability. The Scud campaign against Israel and Saudi Arabia, answered with launcher hunting, Patriots and diplomatic pressure. The UN mandate and the legal limits of who will cross which border. Strategic bombing, oil fires, a cease-fire, and a rules engine whose escalation locks hold in realistic mode and lift in sandbox mode. `npm run experiments` shows strategic choices changing the theater war.
+
+The next milestone is M5: the tactical layer and level switching (expand any battle into detailed units; zoom in and out mid-game).
 
 ## Getting started
 
@@ -22,6 +24,7 @@ npm test               # run all tests
 npm run typecheck      # type-check every package
 npm run sim -- desert-storm   # auto-resolve the campaign headless, both sides by AI
 npm run calibrate             # run 20 seeds and check the results are plausible
+npm run experiments           # compare strategic choices across 20 seeds
 npm run dev                   # start the client at http://localhost:5173
 ```
 
@@ -29,6 +32,7 @@ The client opens the `desert-storm` scenario with you commanding the Coalition a
 
 ### Playing
 
+- **Strategic and Theater:** switch command levels with the tabs in the top bar. The strategic view shows each government's gauges, the missile campaign, your strategic options (locked ones say why), the rules mode, and the event log. The clock pauses when a cease-fire is declared.
 - **Desert Storm:** you command the Coalition's divisions and its air effort (the sliders in the side panel). Tick **AI commands the Coalition** to hand over and watch the campaign auto-resolve. Enemy units, engagements (orange bursts) and objectives (diamonds in the holder's colour) are all on the map. Fog of war comes later.
 
 - Click a unit, depot or supply line to inspect it. Drag to pan; scroll or pinch to zoom.
@@ -54,7 +58,8 @@ packages/
     src/command/   formation tree, aggregate/expand, movement and pathfinding
     src/supply/    supply flow and consumption
     src/combat/    aggregate combat, abstract air power, objectives
-    src/ai/        theater AI (offensive and defensive postures)
+    src/strategy/  strategic layer: actors, missiles, mandate, cease-fire, actions and locks
+    src/ai/        theater AI and strategic AI
   content/   JSON game data (units, nations, scenarios, maps) and Zod schemas
     maps/gulf/     terrain grid, map vectors and shaded relief (generated)
   client/    Vite + React + PixiJS browser app
@@ -63,6 +68,7 @@ packages/
     src/ui/        React panels
 tools/       Headless scenario runner
   calibrate.ts  Desert Storm plausibility check across seeds
+  experiments.ts  M4 experiments: strategic choices vs theater outcomes
   geo/       Map builder (npm run build:map)
 docs/        Design document
 ```
@@ -76,6 +82,7 @@ docs/        Design document
 - **Supply.** Supply flows from sources through depots along links that have limited capacity. Cutting a node or link starves everything downstream: readiness falls first, then morale, mobility and combat power.
 - **Content is data.** New units, nations and scenarios are JSON files validated by Zod, not code.
 - **Combat and AI.** Opposing formations in contact fight Lanchester-style: losses scale with the enemy's combat power, quality and air support, reduced by terrain and fortification. Broken units fall back, then surrender. Each side's AI works at corps level and turns intents ("take this objective") into division orders, as the design describes.
+- **Strategy shapes the war.** The strategic layer is part of the same deterministic simulation. Missile hits wear down a neutral's patience, partners who lose faith take their divisions (and, for a host nation, its air bases) home, and home support decides how long a war can last. In realistic mode the rules engine enforces escalation locks and legal limits; sandbox mode lifts them, but their consequences still apply.
 - **Views never touch the world.** The sim runs in a Web Worker. The UI sends orders as commands and draws the snapshots that come back.
 
 ## Map data

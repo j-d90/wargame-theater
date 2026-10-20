@@ -160,6 +160,15 @@ describe('Desert Storm content', () => {
     }
   });
 
+  it('resolves the strategic layer, allowing missile targets beyond the map edge', () => {
+    const st = loadScenario('desert-storm').scenario.strategy!;
+    expect(st.actors.find((a) => a.id === 'israeli-government')?.side).toBeUndefined();
+    const israel = st.missiles!.targets.find((t) => t.id === 'israel')!;
+    expect(israel.position.x).toBeLessThan(0); // west of the map
+    expect(st.mandate?.allowedSouthOfY).toBeGreaterThan(0);
+    for (const a of st.actors) expect(a.name).toMatch(/government|leadership/); // roles, not people
+  });
+
   it('puts every scenario without sides on a single default side', () => {
     expect(loadScenario('tiny').scenario.sides.map((s) => s.id)).toEqual(['default']);
   });
@@ -173,6 +182,15 @@ describe('Desert Storm content', () => {
     ['an objective held by a non-side', (s: any) => (s.objectives[0].holder = 'martians'), /holder "martians" is not a side/],
     ['an objective in the sea', (s: any) => (s.objectives[0].position = { lat: 27.3, lon: 50.6 }), /impassable terrain/],
     ['an offensive posture without a plan', (s: any) => delete s.sides[0].ai.offensive, /needs an offensive plan/],
+    ['an actor on an unknown side', (s: any) => (s.strategy.actors[0].side = 'martians'), /side "martians" is not a side/],
+    ['an effect on an unknown actor', (s: any) => (s.strategy.actions[2].effects.patience = { nobody: 5 }), /patience effect on unknown actor "nobody"/],
+    ['a locked action without a reason', (s: any) => delete s.strategy.actions.find((a: any) => a.lockedInRealistic).lockReason, /locked actions need a lockReason/],
+    ['pressure without an actor target', (s: any) => delete s.strategy.actions.find((a: any) => a.kind === 'pressure').target, /pressure needs an actor target/],
+    ['more Patriots deployed than exist', (s: any) => (s.strategy.missiles.patriots.at = { riyadh: 9 }), /more batteries deployed than exist/],
+    ['a region that is not on the map', (s: any) => s.strategy.actors[3].refusesRegions.push('narnia'), /region "narnia" is not on the map/],
+    ['a missile weight for an unknown target', (s: any) => (s.sides[1].ai.strategy.scudTargets.paris = 5), /"paris" is not a missile target/],
+    ['a pursuit by a non-command', (s: any) => s.sides[0].ai.strategy.pursuit.push({ corps: 'us-1ad', objectives: ['basra'] }), /strategy.pursuit: "us-1ad" is not a formation with children/],
+    ['a port restriction on a depot', (s: any) => s.strategy.actors[3].restrictsSources.push('kkmc-log-base'), /"kkmc-log-base" is not a supply source/],
   ])('rejects %s', (_name, mutate, pattern) => {
     expect(dsErrors(mutate)).toMatch(pattern);
   });

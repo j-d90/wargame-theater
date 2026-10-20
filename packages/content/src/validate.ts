@@ -7,6 +7,8 @@ import {
   type ObjectiveSpec,
   type OffensivePlan,
   type SideSpec,
+  type StrategySpec,
+  type MissileTargetSpec,
   type GameMap,
   type Nation,
   type Position,
@@ -30,7 +32,17 @@ export interface ResolvedAi extends Omit<AiSpec, 'offensive' | 'defensive'> {
   defensive?: Omit<NonNullable<AiSpec['defensive']>, 'withdrawTo'> & { withdrawTo: Position };
 }
 export type ResolvedSide = Omit<SideSpec, 'ai'> & { ai?: ResolvedAi };
-export interface ResolvedScenarioData extends Omit<Scenario, 'formations' | 'supply' | 'events' | 'sides' | 'objectives'> {
+type MissilesSpec = NonNullable<StrategySpec['missiles']>;
+export interface ResolvedStrategy extends Omit<StrategySpec, 'missiles' | 'mandate' | 'oilFields'> {
+  missiles?: Omit<MissilesSpec, 'launchArea' | 'targets'> & {
+    launchArea: Position;
+    targets: (Omit<MissileTargetSpec, 'position'> & { position: Position })[];
+  };
+  mandate?: Omit<NonNullable<StrategySpec['mandate']>, 'allowedSouthOfLat'> & { allowedSouthOfY?: number };
+  oilFields: { name: string; position: Position }[];
+}
+export interface ResolvedScenarioData extends Omit<Scenario, 'formations' | 'supply' | 'events' | 'sides' | 'objectives' | 'strategy'> {
+  strategy?: ResolvedStrategy;
   formations: ResolvedFormationSpec[];
   supply: { nodes: ResolvedSupplyNodeSpec[]; links: SupplyLinkSpec[] };
   events: ResolvedEvent[];
@@ -77,7 +89,7 @@ export function validateScenario(raw: unknown, catalog: Catalog = defaultCatalog
     if (!map) errors.push(`map "${s.map}" is not in the catalog`);
   }
   const impassable = new Set(map?.terrain.classes.filter((c) => c.speed === 0).map((c) => c.code));
-  const resolvePos = (p: PositionInput, where: string, mustBePassable: boolean): Position => {
+  const resolvePos = (p: PositionInput, where: string, mustBePassable: boolean, allowOffMap = false): Position => {
     let xy: Position;
     if ('lat' in p) {
       if (!map) {
@@ -90,8 +102,8 @@ export function validateScenario(raw: unknown, catalog: Catalog = defaultCatalog
     }
     if (map) {
       const code = terrainCodeAt(map, xy);
-      if (code === undefined) errors.push(`${where}: position is off the map`);
-      else if (mustBePassable && impassable.has(code)) errors.push(`${where}: position is on impassable terrain`);
+      if (code === undefined && !allowOffMap) errors.push(`${where}: position is off the map`);
+      else if (code !== undefined && mustBePassable && impassable.has(code)) errors.push(`${where}: position is on impassable terrain`);
     }
     return xy;
   };
@@ -205,7 +217,7 @@ export function validateScenario(raw: unknown, catalog: Catalog = defaultCatalog
     const { ai, ...rest } = side;
     if (!ai) return rest;
     const where = `side "${side.id}" ai`;
-    const resolved: ResolvedAi = { posture: ai.posture, competence: ai.competence };
+    const resolved: ResolvedAi = { posture: ai.posture, competence: ai.competence, ...(ai.strategy ? { strategy: ai.strategy } : {}) };
     if (ai.posture === 'offensive' && !ai.offensive) errors.push(`${where}: offensive posture needs an offensive plan`);
     if (ai.posture === 'defensive' && !ai.defensive) errors.push(`${where}: defensive posture needs defensive settings`);
     if (ai.offensive) {
@@ -233,16 +245,106 @@ export function validateScenario(raw: unknown, catalog: Catalog = defaultCatalog
     return { ...rest, ai: resolved };
   });
 
+  const strategy = s.strategy ? resolveStrategy(s.strategy) : undefined;
+  function resolveStrategy(st: StrategySpec): ResolvedStrategy {
+    const where = 'strategy';
+    const actorIds = dupes('actor', st.actors.map((a) => a.id));
+    const checkEffects = (e: { support: object; cohesion: object; patience: object; stability: object } | undefined, at: string) => {
+      if (!e) return;
+      for (const gauge of ['support', 'cohesion', 'patience', 'stability'] as const) {
+        for (const a of Object.keys(e[gauge])) if (!actorIds.has(a)) errors.push(`${at}: ${gauge} effect on unknown actor "${a}"`);
+      }
+    };
+    for (const id of Object.keys(st.capital)) if (!sideIds.has(id)) errors.push(`${where}.capital: "${id}" is not a side`);
+    for (const a of st.actors) {
+      const at = `${where} actor "${a.id}"`;
+      if (a.side !== undefined && !sideIds.has(a.side)) errors.push(`${at}: side "${a.side}" is not a side`);
+      for (const n of a.nations) if (!s.nations.includes(n)) errors.push(`${at}: nation "${n}" is not in the scenario`);
+      if (a.interveneAgainst !== undefined && !sideIds.has(a.interveneAgainst)) errors.push(`${at}: interveneAgainst "${a.interveneAgainst}" is not a side`);
+      if (a.interveneAgainst !== undefined && a.patience === undefined) errors.push(`${at}: an actor that can intervene needs patience`);
+      checkEffects(a.onIntervene, at);
+      checkEffects(a.onWithdraw, at);
+      if (a.hostsAirPermille > 0 && !a.side) errors.push(`${at}: only an actor on a side can host its air power`);
+      for (const n of a.restrictsSources) {
+        if (!s.supply.nodes.some((x) => x.id === n && x.kind === 'source')) errors.push(`${at}: "${n}" is not a supply source`);
+      }
+    }
+    const missileTargets = new Set(st.missiles?.targets.map((t) => t.id));
+    dupes('strategic action', st.actions.map((a) => a.id));
+    for (const a of st.actions) {
+      const at = `${where} action "${a.id}"`;
+      if (!sideIds.has(a.side)) errors.push(`${at}: side "${a.side}" is not a side`);
+      if (a.kind === 'pressure' && (a.target === undefined || !actorIds.has(a.target))) errors.push(`${at}: pressure needs an actor target`);
+      if (a.kind === 'deploy-patriots' && (a.target === undefined || !missileTargets.has(a.target))) errors.push(`${at}: deploy-patriots needs a missile target`);
+      if (a.lockedInRealistic && !a.lockReason) errors.push(`${at}: locked actions need a lockReason`);
+      for (const o of a.requires.objectivesHeld) if (!objectiveIds.has(o)) errors.push(`${at}: objective "${o}" does not exist`);
+      checkEffects(a.effects, at);
+    }
+    let missiles: ResolvedStrategy['missiles'];
+    if (st.missiles) {
+      const m = st.missiles;
+      if (!sideIds.has(m.side)) errors.push(`${where}.missiles: side "${m.side}" is not a side`);
+      if (!sideIds.has(m.patriots.side)) errors.push(`${where}.missiles.patriots: side "${m.patriots.side}" is not a side`);
+      for (const t of Object.keys(m.patriots.at)) if (!missileTargets.has(t)) errors.push(`${where}.missiles.patriots: "${t}" is not a missile target`);
+      if (Object.values(m.patriots.at).reduce((a, b) => a + b, 0) > m.patriots.batteries) errors.push(`${where}.missiles.patriots: more batteries deployed than exist`);
+      for (const t of m.targets) checkEffects(t.onHit, `missile target "${t.id}"`);
+      missiles = {
+        ...m,
+        launchArea: resolvePos(m.launchArea, `${where}.missiles.launchArea`, false),
+        targets: m.targets.map((t) => ({ ...t, position: resolvePos(t.position, `missile target "${t.id}"`, false, true) })),
+      };
+    }
+    let mandate: ResolvedStrategy['mandate'];
+    if (st.mandate) {
+      const { allowedSouthOfLat, ...rest } = st.mandate;
+      if (!sideIds.has(rest.side)) errors.push(`${where}.mandate: side "${rest.side}" is not a side`);
+      for (const a of Object.keys(rest.cohesionPerFormationDay)) if (!actorIds.has(a)) errors.push(`${where}.mandate: unknown actor "${a}"`);
+      mandate = { ...rest };
+      if (allowedSouthOfLat !== undefined) {
+        if (!map) errors.push(`${where}.mandate: allowedSouthOfLat needs a map`);
+        else mandate.allowedSouthOfY = latLonToXY(map.frame, allowedSouthOfLat, map.frame.west).y;
+      }
+    }
+    if (st.ceasefire) {
+      if (!sideIds.has(st.ceasefire.side)) errors.push(`${where}.ceasefire: side "${st.ceasefire.side}" is not a side`);
+      for (const o of st.ceasefire.requires) if (!objectiveIds.has(o)) errors.push(`${where}.ceasefire: objective "${o}" does not exist`);
+    }
+    const regionNames = new Set(Object.values(map?.regions?.names ?? {}));
+    const regionRefs = [...st.actors.flatMap((a) => a.refusesRegions), ...(st.mandate?.forbiddenRegions ?? [])];
+    for (const r of regionRefs) if (!regionNames.has(r)) errors.push(`${where}: region "${r}" is not on the map`);
+    for (const side of sideSpecs) {
+      const sa = side.ai?.strategy;
+      if (!sa) continue;
+      for (const p of sa.pursuit) {
+        if (!hasChildren.has(p.corps)) errors.push(`side "${side.id}" strategy.pursuit: "${p.corps}" is not a formation with children`);
+        for (const o of p.objectives) if (!objectiveIds.has(o)) errors.push(`side "${side.id}" strategy.pursuit: objective "${o}" does not exist`);
+      }
+      for (const t of Object.keys(sa.scudTargets)) if (!missileTargets.has(t)) errors.push(`side "${side.id}" strategy.scudTargets: "${t}" is not a missile target`);
+      for (const u of sa.useActions) if (!st.actions.some((a) => a.id === u.action)) errors.push(`side "${side.id}" strategy.useActions: action "${u.action}" does not exist`);
+    }
+    return {
+      ...st,
+      ...(missiles ? { missiles } : {}),
+      ...(mandate ? { mandate } : {}),
+      oilFields: st.oilFields.map((o) => ({ name: o.name, position: resolvePos(o.position, `oil field "${o.name}"`, false) })),
+    } as ResolvedStrategy;
+  }
+
   if (errors.length > 0) return { ok: false, errors };
   return {
     ok: true,
     value: {
-      scenario: { ...s, formations, supply: { nodes, links: s.supply.links }, events, sides, objectives },
+      scenario: { ...withoutStrategy(s), formations, supply: { nodes, links: s.supply.links }, events, sides, objectives, ...(strategy ? { strategy } : {}) },
       units: catalog.units,
       nations: catalog.nations,
       map,
     },
   };
+}
+
+function withoutStrategy(s: Scenario): Omit<Scenario, 'strategy'> {
+  const { strategy: _unresolved, ...rest } = s;
+  return rest;
 }
 
 export function loadScenario(idOrRaw: string | unknown, catalog: Catalog = defaultCatalog): ResolvedScenario {

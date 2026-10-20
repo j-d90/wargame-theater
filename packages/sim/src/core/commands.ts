@@ -3,6 +3,7 @@ import type { WorldState } from './world.ts';
 import { aggregate, expand, frontier } from '../command/formations.ts';
 import { issueMove } from '../command/movement.ts';
 import { moveDepot } from '../supply/depots.ts';
+import { log, takeAction } from '../strategy/strategic.ts';
 import type { AirAllocation, OrderKind } from './world.ts';
 
 /** Intents sent into the sim. */
@@ -14,6 +15,8 @@ export type Command =
   | { type: 'moveDepot'; node: string; to: Position }
   | { type: 'setAirAllocation'; side: string; allocation: AirAllocation }
   | { type: 'setAiControl'; side: string; controlled: boolean }
+  | { type: 'strategicAction'; side: string; action: string }
+  | { type: 'setRulesMode'; mode: 'realistic' | 'sandbox' }
   | { type: 'setDisrupted'; target: { kind: 'node' | 'link'; id: string }; disrupted: boolean };
 
 export type TimedCommand = Command & { tick: number };
@@ -56,11 +59,23 @@ export function applyCommand(world: WorldState, cmd: Command): void {
       const air = world.sides[cmd.side]?.air;
       if (!air) throw new Error(`setAirAllocation: side "${cmd.side}" has no air power`);
       const a = cmd.allocation;
-      const parts = [a.counterAir, a.interdiction, a.attrition, a.support];
+      const parts = [a.counterAir, a.interdiction, a.attrition, a.support, a.scudHunt, a.strategic];
       if (parts.some((p) => !Number.isInteger(p) || p < 0) || parts.reduce((x, y) => x + y, 0) !== 1000) {
         throw new Error('setAirAllocation: shares must be whole permille summing to 1000');
       }
       air.allocation = { ...a };
+      return;
+    }
+    case 'strategicAction':
+      takeAction(world, cmd.side, cmd.action);
+      return;
+    case 'setRulesMode': {
+      const s = world.strategy;
+      if (!s) throw new Error('setRulesMode: this scenario has no strategic layer');
+      if (s.mode !== cmd.mode) {
+        s.mode = cmd.mode;
+        log(world, 'warning', cmd.mode === 'sandbox' ? 'Sandbox rules: escalation locks and legal limits lifted.' : 'Realistic rules restored.');
+      }
       return;
     }
     case 'setAiControl': {

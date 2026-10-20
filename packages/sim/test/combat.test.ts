@@ -53,7 +53,7 @@ describe('contact and fire', () => {
     const open = protection(w, f(w, 'r1'));
     f(w, 'r1').fortification = 800;
     expect(protection(w, f(w, 'r1'))).toBeCloseTo(open * 1.8, 6);
-    w.terrain = { cellKm: 1000, cols: 1, rows: 1, cells: '^', speeds: { '^': 600 }, defense: { '^': 1300 } };
+    w.terrain = { cellKm: 1000, cols: 1, rows: 1, cells: '^', speeds: { '^': 600 }, defense: { '^': 1300 }, regions: null };
     expect(protection(w, f(w, 'r1'))).toBeCloseTo(1.3 * 1.8, 6);
   });
 

@@ -34,7 +34,7 @@ export function hasAggregatedAncestor(world: WorldState, id: string): boolean {
   return false;
 }
 
-/** Still in the fight: not surrendered or destroyed. */
+/** Still in the fight: not surrendered, destroyed, or withdrawn by its government. */
 export function alive(f: Formation): boolean {
   return f.status === 'active' || f.status === 'retreating';
 }

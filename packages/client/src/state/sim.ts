@@ -6,6 +6,9 @@ import { notify, store } from './store.ts';
 /** Side the player asked for with ?side=, else the coalition, else the first side. */
 const requestedSide = new URLSearchParams(location.search).get('side');
 
+/** Strategic events already seen, so only new crises pop up as toasts. */
+let seenLog = 0;
+
 const worker = new Worker(new URL('../worker/sim.worker.ts', import.meta.url), { type: 'module' });
 const post = (msg: ToWorker) => worker.postMessage(msg);
 
@@ -27,6 +30,12 @@ worker.onmessage = (e: MessageEvent<FromWorker>) => {
       // Drop a selection whose formation was just expanded or collapsed away.
       const gone = selection?.kind === 'formation' && !msg.summary.active.some((f) => f.id === selection.id);
       store.set({ summary: msg.summary, speed: msg.speed, ...(gone ? { selection: null, mode: 'select' as const } : {}) });
+      const log = msg.summary.strategy?.log ?? [];
+      const latest = log[0] ? log[0].tick * 1000 + log.length : 0;
+      if (seenLog !== 0 && latest !== seenLog) {
+        for (const e of log.filter((x) => x.kind === 'crisis' && x.tick >= msg.summary.tick - 96).slice(0, 2)) notify(e.text, 'error');
+      }
+      seenLog = latest || seenLog || 1;
       return;
     }
     case 'rejected':

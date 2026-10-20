@@ -17,3 +17,5 @@ export * from './combat/air.ts';
 export * from './combat/objectives.ts';
 export * from './supply/depots.ts';
 export * from './ai/theater.ts';
+export * from './strategy/strategic.ts';
+export * from './ai/strategy.ts';

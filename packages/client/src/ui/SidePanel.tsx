@@ -10,6 +10,8 @@ const AIR_LABELS: Record<AirKey, string> = {
   interdiction: 'Interdiction',
   attrition: 'Strikes on units',
   support: 'Close support',
+  scudHunt: 'Missile hunt',
+  strategic: 'Strategic',
 };
 
 const css = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
@@ -44,6 +46,7 @@ const STATUS: Record<FormationSummary['status'], string> = {
   retreating: 'Falling back',
   surrendered: 'Surrendered',
   destroyed: 'Destroyed',
+  withdrawn: 'Withdrawn by its government',
 };
 
 function FormationPanel({ f, summary }: { f: FormationSummary; summary: WorldSummary }) {

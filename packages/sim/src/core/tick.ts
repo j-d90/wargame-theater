@@ -9,6 +9,8 @@ import { airPhase, dailyAirPhase } from '../combat/air.ts';
 import { objectivesPhase } from '../combat/objectives.ts';
 import { depotPhase } from '../supply/depots.ts';
 import { aiPhase } from '../ai/theater.ts';
+import { strategicAiPhase } from '../ai/strategy.ts';
+import { strategyPhase } from '../strategy/strategic.ts';
 
 /**
  * Advance the world by one fixed tick (15 minutes of game time). Mutates `world`.
@@ -20,11 +22,13 @@ export function step(world: WorldState, commands: readonly Command[] = []): void
   }
   for (const cmd of commands) applyCommand(world, cmd);
 
-  aiPhase(world);
   if (world.tick % TICKS_PER_DAY === 0) {
     rollLinkEfficiency(world);
     dailyAirPhase(world);
   }
+  strategyPhase(world);
+  strategicAiPhase(world);
+  aiPhase(world);
   depotPhase(world);
   movementPhase(world);
   combatPhase(world);

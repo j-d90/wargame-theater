@@ -55,6 +55,16 @@ function printSides(s: WorldSummary): void {
   const objectives = s.objectives.map((o) => `${o.name}: ${o.holder ? names.get(o.holder) : '-'}`);
   console.log(`  objectives: ${objectives.join(' | ')}`);
   console.log(`  engagements: ${s.engagements.length}`);
+  const st = s.strategy;
+  if (!st) return;
+  const gauge = (label: string, v: number | null) => (v === null ? '' : ` ${label} ${pct(v).trim()}`);
+  const actors = st.actors.map(
+    (a) => `${a.name}${gauge('sup', a.support)}${gauge('coh', a.cohesion)}${gauge('pat', a.patience)}${gauge('stab', a.stability)}${a.status === 'active' || a.status === 'neutral' ? '' : ` [${a.status}]`}`,
+  );
+  console.log(`  actors: ${actors.join(' | ')}`);
+  if (st.missiles) console.log(`  missiles: ${st.missiles.launchers} launchers, ${st.missiles.fired} fired, ${st.missiles.hits} hit, suppression ${pct(st.missiles.suppression).trim()}`);
+  // Events since the previous summary, oldest first.
+  for (const e of [...st.log].reverse().filter((x) => x.tick > s.tick - TICKS_PER_DAY)) console.log(`  ${e.kind === 'crisis' ? '!!' : e.kind === 'warning' ? ' !' : '  '} ${e.text}`);
 }
 
 function printDay(s: WorldSummary): void {

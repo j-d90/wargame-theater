@@ -4,6 +4,7 @@ import { sim } from '../state/sim.ts';
 import { select, store, useApp } from '../state/store.ts';
 import { MapCanvas } from './MapCanvas.tsx';
 import { SidePanel } from './SidePanel.tsx';
+import { StrategicView } from './StrategicView.tsx';
 import { TopBar } from './TopBar.tsx';
 
 function Toasts() {
@@ -55,13 +56,16 @@ function useKeyboard() {
 
 export function App() {
   useKeyboard();
+  const view = useApp((s) => s.view);
   return (
     <div className="app">
       <TopBar />
-      <main className="main">
+      {/* The map stays mounted while the strategic view is up, so switching back is instant. */}
+      <main className="main" hidden={view !== 'theater'}>
         <MapCanvas />
         <SidePanel />
       </main>
+      {view === 'strategic' && <StrategicView />}
       <Toasts />
     </div>
   );

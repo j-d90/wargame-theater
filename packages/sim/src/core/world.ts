@@ -1,4 +1,14 @@
-import type { Echelon, Position, ResolvedAi, ResolvedEvent, ResolvedScenario } from '@tow/content';
+import type {
+  Echelon,
+  Effects,
+  Position,
+  ResolvedAi,
+  ResolvedEvent,
+  ResolvedScenario,
+  ResolvedStrategy,
+  StrategicActionSpec,
+  StrategyRules,
+} from '@tow/content';
 import { createRng, type RngState } from './rng.ts';
 import { DEFAULT_RULES, type Rules } from './rules.ts';
 import { TICKS_PER_DAY, tickAt } from './time.ts';
@@ -51,9 +61,12 @@ export interface TerrainGrid {
   speeds: Record<string, number>;
   /** Defender protection per class code, permille. */
   defense: Record<string, number>;
+  /** Country of each cell ('.' for none), if the map has them. */
+  regions: { names: Record<string, string>; cells: string } | null;
 }
 
-export type FormationStatus = 'active' | 'retreating' | 'surrendered' | 'destroyed';
+/** 'withdrawn': pulled out of the war by its government. */
+export type FormationStatus = 'active' | 'retreating' | 'surrendered' | 'destroyed' | 'withdrawn';
 
 export interface Formation {
   id: string;
@@ -104,6 +117,8 @@ export interface SupplyNode {
   speedKmPerDay: number;
   /** Where a mobile depot is heading, if anywhere. */
   moveTo: Position | null;
+  /** For sources: industrial capacity left after strategic bombing, permille of production. */
+  industry: number;
 }
 
 export interface SupplyLink {
@@ -129,6 +144,10 @@ export interface AirAllocation {
   interdiction: number;
   attrition: number;
   support: number;
+  /** Hunting enemy missile launchers. */
+  scudHunt: number;
+  /** Strategic bombing of the enemy's industry and leadership. */
+  strategic: number;
 }
 
 export interface AirState {
@@ -178,6 +197,85 @@ export interface SideState {
   prisonersTaken: number;
 }
 
+export type ActorStatus = 'active' | 'neutral' | 'intervened' | 'withdrawn';
+
+export interface ActorState {
+  id: string;
+  name: string;
+  side: string | null;
+  nations: string[];
+  /** Gauges in permille; null when the actor doesn't have that gauge. */
+  support: number | null;
+  cohesion: number | null;
+  patience: number | null;
+  stability: number | null;
+  withdrawBelow: number | null;
+  refusesRegions: string[];
+  interveneAgainst: string | null;
+  onIntervene: Effects | null;
+  onWithdraw: Effects | null;
+  hostsAirPermille: number;
+  restrictsSources: string[];
+  restrictedTo: number;
+  status: ActorStatus;
+}
+
+export interface StrategicEvent {
+  tick: number;
+  kind: 'info' | 'warning' | 'crisis';
+  text: string;
+}
+
+export interface MissileStrike {
+  tick: number;
+  target: string;
+  intercepted: boolean;
+}
+
+export interface MissileState {
+  side: string;
+  launchers: number;
+  launchesPerLauncherPerDay: number;
+  launchArea: Position;
+  targets: NonNullable<ResolvedStrategy['missiles']>['targets'];
+  patriotSide: string;
+  patriotBatteries: number;
+  interceptPerBattery: number;
+  maxIntercept: number;
+  patriotsAt: Record<string, number>;
+  /** Strikes in the last two days, for display. */
+  recent: MissileStrike[];
+  fired: number;
+  hits: number;
+  /** Fraction of launches suppressed by launcher hunting today, permille. */
+  suppression: number;
+}
+
+export interface StrategyState {
+  mode: 'realistic' | 'sandbox';
+  actors: Record<string, ActorState>;
+  capital: Record<string, number>;
+  actions: StrategicActionSpec[];
+  /** Tick each action was last taken. */
+  lastUsed: Record<string, number>;
+  missiles: MissileState | null;
+  mandate: NonNullable<ResolvedStrategy['mandate']> | null;
+  ceasefireSpec: NonNullable<ResolvedStrategy['ceasefire']> | null;
+  ceasefire: { tick: number | null; reason: string | null };
+  /** Tick the cease-fire's liberation objectives were all first held. */
+  liberatedTick: number | null;
+  /** Sides pressing on past the mandate. */
+  pursuing: Record<string, boolean>;
+  oilFires: number | null;
+  oilFields: { name: string; position: Position }[];
+  rules: StrategyRules;
+  log: StrategicEvent[];
+  /** Per side, for daily changes: losses and surrenders at the start of the day, objective points taken, retreat losses after liberation. */
+  dayStartLosses: Record<string, number>;
+  objectivePoints: Record<string, number>;
+  retreatLosses: Record<string, number>;
+}
+
 export interface ObjectiveState {
   id: string;
   name: string;
@@ -211,6 +309,8 @@ export interface WorldState {
   objectives: Record<string, ObjectiveState>;
   /** Pairs of formation ids in contact as of the last combat phase. */
   contacts: [string, string][];
+  /** Null for scenarios without a strategic layer. */
+  strategy: StrategyState | null;
 }
 
 /** Ids of a record in sorted order. All sim iteration goes through this. */
@@ -320,6 +420,7 @@ export function createWorld(resolved: ResolvedScenario, options: CreateWorldOpti
       mobile: n.mobile ?? false,
       speedKmPerDay: n.speedKmPerDay ?? 0,
       moveTo: null,
+      industry: 1000,
     };
   }
   const links: Record<string, SupplyLink> = {};
@@ -357,12 +458,14 @@ export function createWorld(resolved: ResolvedScenario, options: CreateWorldOpti
           cells: map.terrain.cells,
           speeds: Object.fromEntries(map.terrain.classes.map((c) => [c.code, c.speed])),
           defense: Object.fromEntries(map.terrain.classes.map((c) => [c.code, c.defense])),
+          regions: map.regions ? { names: { ...map.regions.names }, cells: map.regions.cells } : null,
         }
       : null,
     startDate: scenario.startDate ?? null,
     sides: {},
     objectives: {},
     contacts: [],
+    strategy: scenario.strategy ? createStrategy(scenario.strategy) : null,
   };
 
   for (const s of scenario.sides) {
@@ -376,7 +479,7 @@ export function createWorld(resolved: ResolvedScenario, options: CreateWorldOpti
             sortiesPerDay: s.air.sortiesPerDay,
             quality: s.air.quality,
             pool: 1000,
-            allocation: { counterAir: 500, interdiction: 0, attrition: 300, support: 200 },
+            allocation: { counterAir: 500, interdiction: 0, attrition: 300, support: 200, scudHunt: 0, strategic: 0 },
             sorties: 0,
             superiority: 0,
             supportBonus: 1000,
@@ -426,6 +529,73 @@ export function createWorld(resolved: ResolvedScenario, options: CreateWorldOpti
     side.initialCombatPower = sideCombatPower(world, side.id);
   }
   return world;
+}
+
+function createStrategy(st: ResolvedStrategy): StrategyState {
+  const actors: Record<string, ActorState> = {};
+  for (const a of st.actors) {
+    actors[a.id] = {
+      id: a.id,
+      name: a.name,
+      side: a.side ?? null,
+      nations: [...a.nations],
+      support: a.support ?? null,
+      cohesion: a.cohesion ?? null,
+      patience: a.patience ?? null,
+      stability: a.stability ?? null,
+      withdrawBelow: a.withdrawBelow ?? null,
+      refusesRegions: [...a.refusesRegions],
+      interveneAgainst: a.interveneAgainst ?? null,
+      onIntervene: a.onIntervene ?? null,
+      onWithdraw: a.onWithdraw ?? null,
+      hostsAirPermille: a.hostsAirPermille,
+      restrictsSources: [...a.restrictsSources],
+      restrictedTo: a.restrictedTo,
+      status: a.side ? 'active' : 'neutral',
+    };
+  }
+  const m = st.missiles;
+  return {
+    mode: st.mode,
+    actors,
+    capital: { ...st.capital },
+    actions: structuredCloneJson(st.actions),
+    lastUsed: {},
+    missiles: m
+      ? {
+          side: m.side,
+          launchers: m.launchers,
+          launchesPerLauncherPerDay: m.launchesPerLauncherPerDay,
+          launchArea: { ...m.launchArea },
+          targets: structuredCloneJson(m.targets),
+          patriotSide: m.patriots.side,
+          patriotBatteries: m.patriots.batteries,
+          interceptPerBattery: m.patriots.interceptPerBattery,
+          maxIntercept: m.patriots.maxIntercept,
+          patriotsAt: { ...m.patriots.at },
+          recent: [],
+          fired: 0,
+          hits: 0,
+          suppression: 0,
+        }
+      : null,
+    mandate: st.mandate ? structuredCloneJson(st.mandate) : null,
+    ceasefireSpec: st.ceasefire ? structuredCloneJson(st.ceasefire) : null,
+    ceasefire: { tick: null, reason: null },
+    liberatedTick: null,
+    pursuing: {},
+    oilFires: null,
+    oilFields: structuredCloneJson(st.oilFields),
+    rules: { ...st.rules },
+    log: [],
+    dayStartLosses: {},
+    objectivePoints: {},
+    retreatLosses: {},
+  };
+}
+
+function structuredCloneJson<T>(v: T): T {
+  return JSON.parse(JSON.stringify(v)) as T;
 }
 
 /** Deep copy for snapshots. The state is plain JSON by contract, so a JSON round trip is exact. */

@@ -1,6 +1,6 @@
 import type { SpeedSetting } from '../worker/protocol.ts';
 import { sim } from '../state/sim.ts';
-import { useApp } from '../state/store.ts';
+import { store, useApp } from '../state/store.ts';
 import { calendarDate, clock } from './format.ts';
 
 const SPEED_BUTTONS: { speed: SpeedSetting; label: string; title: string }[] = [
@@ -18,6 +18,9 @@ export function TopBar() {
   const startDate = useApp((s) => s.summary?.startDate ?? null);
   const { day, time } = clock(tick);
   const date = calendarDate(startDate, day);
+  const hasStrategy = useApp((s) => s.summary?.strategy != null);
+  const view = useApp((s) => s.view);
+  const ceasefire = useApp((s) => s.summary?.strategy?.ceasefire.tick != null);
 
   return (
     <header className="topbar">
@@ -25,6 +28,16 @@ export function TopBar() {
         <strong>Theater of War</strong>
         <span className="scenario">{name}</span>
       </div>
+      {hasStrategy && (
+        <div className="levels" role="tablist" aria-label="Command level">
+          {(['strategic', 'theater'] as const).map((v) => (
+            <button key={v} role="tab" aria-selected={view === v} className={view === v ? 'active' : ''} onClick={() => store.set({ view: v })}>
+              {v === 'strategic' ? 'Strategic' : 'Theater'}
+            </button>
+          ))}
+        </div>
+      )}
+      {ceasefire && <span className="ceasefire">Cease-fire</span>}
       <div className="clock" aria-live="off">
         <span className="day">{date ?? `Day ${day}`}</span>
         {date && <span className="of">day {day}</span>}

@@ -1,9 +1,9 @@
 {
  "id": "desert-storm",
  "name": "Desert Storm, 1991",
- "description": "The Gulf War from the start of the air campaign on 17 January 1991 to the cease-fire on 28 February: the coalition must liberate Kuwait. Division-level orders of battle; positions are approximate.",
+ "description": "The Gulf War from the start of the air campaign on 17 January 1991 to the cease-fire on 28 February (the clock runs to 7 March in case the war goes on): the coalition must liberate Kuwait. Division-level orders of battle; positions are approximate.",
  "seed": 1991,
- "days": 43,
+ "days": 50,
  "map": "gulf",
  "startDate": "1991-01-17",
  "nations": [
@@ -35,10 +35,33 @@
    "ai": {
     "posture": "offensive",
     "competence": 800,
+    "strategy": {
+     "scudResponse": "historical",
+     "scudHuntShare": 120,
+     "strategicBombing": 100,
+     "pursueAfterLiberation": false,
+     "ceasefireAfterHours": 24,
+     "pursuit": [
+      {
+       "corps": "xviii-corps",
+       "objectives": [
+        "nasiriyah",
+        "al-kut"
+       ]
+      },
+      {
+       "corps": "vii-corps",
+       "objectives": [
+        "basra",
+        "al-amarah"
+       ]
+      }
+     ]
+    },
     "offensive": {
      "earliestDay": 32,
      "latestDay": 40,
-     "launchWhenEnemyBelow": 450,
+     "launchWhenEnemyBelow": 700,
      "plans": [
       {
        "corps": "xviii-corps",
@@ -49,7 +72,8 @@
        "objectives": [
         "as-salman",
         "highway-8-tallil",
-        "jalibah"
+        "jalibah",
+        "rumaila"
        ],
        "depot": "xviii-fwd-base"
       },
@@ -62,6 +86,7 @@
        "objectives": [
         "busayyah",
         "rg-west",
+        "medina-ridge",
         "safwan"
        ],
        "depot": "vii-fwd-base"
@@ -75,7 +100,7 @@
        "objectives": [
         "al-jaber",
         "kuwait-airport",
-        "kuwait-city"
+        "mutla-ridge"
        ],
        "depot": "imef-fwd-base"
       },
@@ -87,9 +112,9 @@
        },
        "objectives": [
         "ali-al-salem",
-        "mutla-ridge",
         "kuwait-city"
-       ]
+       ],
+       "depot": "jfcn-fwd-base"
       },
       {
        "corps": "jfc-east",
@@ -99,7 +124,8 @@
        },
        "objectives": [
         "kuwait-city"
-       ]
+       ],
+       "depot": "jfce-fwd-base"
       }
      ]
     }
@@ -119,6 +145,25 @@
    "ai": {
     "posture": "defensive",
     "competence": 450,
+    "strategy": {
+     "scudTargets": {
+      "israel": 550,
+      "riyadh": 300,
+      "dhahran": 150
+     },
+     "withdrawWhenStabilityBelow": 300,
+     "useActions": [
+      {
+       "action": "iraq-oil-spill",
+       "fromDay": 8
+      },
+      {
+       "action": "iraq-oil-fires",
+       "fromDay": 0,
+       "whenWithdrawing": true
+      }
+     ]
+    },
     "defensive": {
      "reserves": [
       "iq-rgfc",
@@ -259,6 +304,72 @@
    "holder": "iraq",
    "radiusKm": 20,
    "points": 20
+  },
+  {
+   "id": "medina-ridge",
+   "name": "Medina Ridge",
+   "position": {
+    "lat": 29.95,
+    "lon": 47.12
+   },
+   "holder": "iraq",
+   "radiusKm": 20,
+   "points": 20
+  },
+  {
+   "id": "rumaila",
+   "name": "Rumaila oil field",
+   "position": {
+    "lat": 30.35,
+    "lon": 47.35
+   },
+   "holder": "iraq",
+   "radiusKm": 20,
+   "points": 20
+  },
+  {
+   "id": "basra",
+   "name": "Basra",
+   "position": {
+    "lat": 30.5,
+    "lon": 47.8
+   },
+   "holder": "iraq",
+   "radiusKm": 20,
+   "points": 30
+  },
+  {
+   "id": "nasiriyah",
+   "name": "An Nasiriyah",
+   "position": {
+    "lat": 31.04,
+    "lon": 46.27
+   },
+   "holder": "iraq",
+   "radiusKm": 20,
+   "points": 30
+  },
+  {
+   "id": "al-amarah",
+   "name": "Al Amarah",
+   "position": {
+    "lat": 31.84,
+    "lon": 47.15
+   },
+   "holder": "iraq",
+   "radiusKm": 20,
+   "points": 20
+  },
+  {
+   "id": "al-kut",
+   "name": "Al Kut",
+   "position": {
+    "lat": 32.5,
+    "lon": 45.82
+   },
+   "holder": "iraq",
+   "radiusKm": 20,
+   "points": 30
   }
  ],
  "formations": [
@@ -476,7 +587,7 @@
     "lon": 46.25
    },
    "parent": "centcom",
-   "supplyNode": "hafar-log-base"
+   "supplyNode": "jfcn-fwd-base"
   },
   {
    "id": "eg-3mech",
@@ -536,7 +647,7 @@
     "lon": 48.3
    },
    "parent": "centcom",
-   "supplyNode": "mishab-log-base"
+   "supplyNode": "jfce-fwd-base"
   },
   {
    "id": "jfce-abubakr-othman",
@@ -1433,6 +1544,34 @@
     "speedKmPerDay": 100
    },
    {
+    "id": "jfcn-fwd-base",
+    "name": "JFC-North Forward Log Base",
+    "kind": "depot",
+    "side": "coalition",
+    "position": {
+     "lat": 28.45,
+     "lon": 46.2
+    },
+    "capacity": 6000,
+    "stock": 4000,
+    "mobile": true,
+    "speedKmPerDay": 80
+   },
+   {
+    "id": "jfce-fwd-base",
+    "name": "JFC-East Forward Log Base",
+    "kind": "depot",
+    "side": "coalition",
+    "position": {
+     "lat": 28.15,
+     "lon": 48.35
+    },
+    "capacity": 6000,
+    "stock": 4000,
+    "mobile": true,
+    "speedKmPerDay": 80
+   },
+   {
     "id": "baghdad-source",
     "name": "Baghdad",
     "kind": "source",
@@ -1595,6 +1734,24 @@
     "vulnerability": 0.4
    },
    {
+    "id": "convoy-hafar-jfcn",
+    "from": "hafar-log-base",
+    "to": "jfcn-fwd-base",
+    "mode": "road",
+    "capacityPerTick": 80,
+    "variance": 150,
+    "vulnerability": 0.4
+   },
+   {
+    "id": "convoy-mishab-jfce",
+    "from": "mishab-log-base",
+    "to": "jfce-fwd-base",
+    "mode": "road",
+    "capacityPerTick": 60,
+    "variance": 150,
+    "vulnerability": 0.4
+   },
+   {
     "id": "euphrates-bridges",
     "from": "baghdad-source",
     "to": "nasiriyah-depot",
@@ -1668,5 +1825,472 @@
    }
   ]
  },
- "events": []
+ "events": [],
+ "strategy": {
+  "mode": "realistic",
+  "capital": {
+   "coalition": 400,
+   "iraq": 100
+  },
+  "actors": [
+   {
+    "id": "us-government",
+    "name": "US government",
+    "side": "coalition",
+    "nations": [
+     "us"
+    ],
+    "support": 800
+   },
+   {
+    "id": "uk-government",
+    "name": "UK government",
+    "side": "coalition",
+    "nations": [
+     "uk"
+    ],
+    "support": 800
+   },
+   {
+    "id": "french-government",
+    "name": "French government",
+    "side": "coalition",
+    "nations": [
+     "france"
+    ],
+    "support": 750
+   },
+   {
+    "id": "saudi-government",
+    "name": "Saudi government",
+    "side": "coalition",
+    "nations": [
+     "saudi-arabia"
+    ],
+    "cohesion": 900,
+    "withdrawBelow": 250,
+    "refusesRegions": [
+     "iraq"
+    ],
+    "hostsAirPermille": 500,
+    "restrictsSources": [
+     "dammam-port",
+     "jubail-port"
+    ],
+    "restrictedTo": 400,
+    "onWithdraw": {
+     "support": {
+      "us-government": -120,
+      "uk-government": -120,
+      "french-government": -120
+     },
+     "cohesion": {
+      "egyptian-government": -150,
+      "other-arab-governments": -150
+     },
+     "patience": {},
+     "stability": {},
+     "capital": 0
+    }
+   },
+   {
+    "id": "egyptian-government",
+    "name": "Egyptian government",
+    "side": "coalition",
+    "nations": [
+     "egypt"
+    ],
+    "cohesion": 750,
+    "withdrawBelow": 300,
+    "refusesRegions": [
+     "iraq"
+    ],
+    "onWithdraw": {
+     "support": {
+      "us-government": -60,
+      "uk-government": -60,
+      "french-government": -60
+     },
+     "cohesion": {
+      "saudi-government": -80,
+      "other-arab-governments": -100
+     },
+     "patience": {},
+     "stability": {},
+     "capital": 0
+    }
+   },
+   {
+    "id": "other-arab-governments",
+    "name": "Syrian and other Arab governments",
+    "side": "coalition",
+    "nations": [
+     "other-coalition"
+    ],
+    "cohesion": 700,
+    "withdrawBelow": 350,
+    "refusesRegions": [
+     "iraq"
+    ],
+    "onWithdraw": {
+     "support": {
+      "us-government": -60,
+      "uk-government": -60,
+      "french-government": -60
+     },
+     "cohesion": {
+      "saudi-government": -60,
+      "egyptian-government": -80
+     },
+     "patience": {},
+     "stability": {},
+     "capital": 0
+    }
+   },
+   {
+    "id": "israeli-government",
+    "name": "Israeli government",
+    "patience": 1000,
+    "interveneAgainst": "iraq",
+    "onIntervene": {
+     "support": {},
+     "cohesion": {
+      "saudi-government": -350,
+      "egyptian-government": -480,
+      "other-arab-governments": -450
+     },
+     "patience": {},
+     "stability": {
+      "iraqi-leadership": 80
+     },
+     "capital": 0
+    }
+   },
+   {
+    "id": "iraqi-leadership",
+    "name": "Iraqi leadership",
+    "side": "iraq",
+    "nations": [
+     "iraq"
+    ],
+    "stability": 800
+   }
+  ],
+  "actions": [
+   {
+    "id": "patriots-israel",
+    "name": "Send Patriot batteries to Israel",
+    "side": "coalition",
+    "kind": "deploy-patriots",
+    "target": "israel",
+    "cost": 30,
+    "description": "Move a Patriot battery to defend Israeli cities and show that the coalition is protecting Israel."
+   },
+   {
+    "id": "patriots-riyadh",
+    "name": "Reinforce Riyadh with Patriots",
+    "side": "coalition",
+    "kind": "deploy-patriots",
+    "target": "riyadh",
+    "cost": 10,
+    "description": "Move a Patriot battery to Riyadh."
+   },
+   {
+    "id": "press-israel",
+    "name": "Press Israel to hold back",
+    "side": "coalition",
+    "kind": "pressure",
+    "target": "israeli-government",
+    "cost": 100,
+    "cooldownDays": 3,
+    "effects": {
+     "support": {},
+     "cohesion": {},
+     "patience": {
+      "israeli-government": 150
+     },
+     "stability": {},
+     "capital": 0
+    },
+    "description": "Diplomatic pressure and reassurance so Israel does not retaliate, which would split the Arab members from the coalition."
+   },
+   {
+    "id": "declare-ceasefire",
+    "name": "Declare a cease-fire",
+    "side": "coalition",
+    "kind": "declare-ceasefire",
+    "description": "End offensive operations once Kuwait is liberated."
+   },
+   {
+    "id": "pursue-into-iraq",
+    "name": "Pursue into Iraq beyond the mandate",
+    "side": "coalition",
+    "kind": "pursue",
+    "escalation": 2,
+    "oneShot": true,
+    "requires": {
+     "objectivesHeld": [
+      "kuwait-city"
+     ]
+    },
+    "effects": {
+     "support": {},
+     "cohesion": {
+      "saudi-government": -250,
+      "egyptian-government": -300,
+      "other-arab-governments": -300
+     },
+     "patience": {},
+     "stability": {
+      "iraqi-leadership": 100
+     },
+     "capital": 0
+    },
+    "description": "Keep advancing toward Basra and Baghdad after liberating Kuwait. The UN mandate covers liberating Kuwait; Arab members will not follow."
+   },
+   {
+    "id": "countervalue-bombing",
+    "name": "Bomb Iraqi cities",
+    "side": "coalition",
+    "kind": "countervalue",
+    "escalation": 5,
+    "lockedInRealistic": true,
+    "lockReason": "Deliberately attacking civilians is a war crime; locked under realistic rules.",
+    "effects": {
+     "support": {
+      "us-government": -250,
+      "uk-government": -250,
+      "french-government": -300
+     },
+     "cohesion": {
+      "saudi-government": -250,
+      "egyptian-government": -350,
+      "other-arab-governments": -350
+     },
+     "patience": {},
+     "stability": {
+      "iraqi-leadership": -200
+     },
+     "capital": 0
+    },
+    "description": "Countervalue strikes on population centres. Modelled so the rules engine can show why it is locked."
+   },
+   {
+    "id": "iraq-oil-spill",
+    "name": "Release oil into the Gulf",
+    "side": "iraq",
+    "kind": "generic",
+    "escalation": 3,
+    "oneShot": true,
+    "effects": {
+     "support": {
+      "us-government": 10,
+      "uk-government": 10
+     },
+     "cohesion": {
+      "saudi-government": 20
+     },
+     "patience": {},
+     "stability": {},
+     "capital": 0
+    },
+    "description": "Pump crude from Kuwaiti terminals into the Gulf. An environmental attack that hardens opinion against Iraq."
+   },
+   {
+    "id": "iraq-oil-fires",
+    "name": "Set Kuwait\u2019s oil wells on fire",
+    "side": "iraq",
+    "kind": "oil-fires",
+    "escalation": 3,
+    "oneShot": true,
+    "effects": {
+     "support": {
+      "us-government": 10,
+      "uk-government": 10,
+      "french-government": 10
+     },
+     "cohesion": {},
+     "patience": {},
+     "stability": {},
+     "capital": 0
+    },
+    "description": "Burn the oil fields while withdrawing. Smoke hampers coalition air operations over Kuwait."
+   }
+  ],
+  "missiles": {
+   "side": "iraq",
+   "launchers": 36,
+   "launchesPerLauncherPerDay": 0.1,
+   "launchArea": {
+    "lat": 33.0,
+    "lon": 40.6
+   },
+   "targets": [
+    {
+     "id": "israel",
+     "name": "Israel (Tel Aviv and Haifa)",
+     "kind": "city",
+     "position": {
+      "lat": 32.08,
+      "lon": 34.78
+     },
+     "onHit": {
+      "support": {},
+      "cohesion": {},
+      "patience": {
+       "israeli-government": -70
+      },
+      "stability": {},
+      "capital": 0
+     },
+     "onIntercept": {
+      "support": {},
+      "cohesion": {},
+      "patience": {
+       "israeli-government": -25
+      },
+      "stability": {},
+      "capital": 0
+     }
+    },
+    {
+     "id": "riyadh",
+     "name": "Riyadh",
+     "kind": "city",
+     "position": {
+      "lat": 24.71,
+      "lon": 46.68
+     },
+     "onHit": {
+      "support": {
+       "us-government": -2
+      },
+      "cohesion": {
+       "saudi-government": -12
+      },
+      "patience": {},
+      "stability": {},
+      "capital": 0
+     },
+     "onIntercept": {
+      "support": {},
+      "cohesion": {
+       "saudi-government": -3
+      },
+      "patience": {},
+      "stability": {},
+      "capital": 0
+     }
+    },
+    {
+     "id": "dhahran",
+     "name": "Dhahran",
+     "kind": "military",
+     "position": {
+      "lat": 26.29,
+      "lon": 50.11
+     },
+     "onHit": {
+      "support": {
+       "us-government": -6
+      },
+      "cohesion": {},
+      "patience": {},
+      "stability": {},
+      "capital": 0
+     },
+     "onIntercept": {
+      "support": {},
+      "cohesion": {},
+      "patience": {},
+      "stability": {},
+      "capital": 0
+     }
+    }
+   ],
+   "patriots": {
+    "side": "coalition",
+    "batteries": 6,
+    "interceptPerBattery": 250,
+    "maxIntercept": 700,
+    "at": {
+     "riyadh": 2,
+     "dhahran": 2
+    }
+   }
+  },
+  "mandate": {
+   "side": "coalition",
+   "forbiddenRegions": [
+    "iraq"
+   ],
+   "allowedSouthOfLat": 31.15,
+   "cohesionPerFormationDay": {
+    "saudi-government": 10,
+    "egyptian-government": 15,
+    "other-arab-governments": 15
+   }
+  },
+  "ceasefire": {
+   "side": "coalition",
+   "requires": [
+    "kuwait-city",
+    "kuwait-airport",
+    "mutla-ridge"
+   ],
+   "forceWhenSupportBelow": 500
+  },
+  "oilFields": [
+   {
+    "name": "Burgan",
+    "position": {
+     "lat": 28.92,
+     "lon": 47.95
+    }
+   },
+   {
+    "name": "Ahmadi",
+    "position": {
+     "lat": 29.05,
+     "lon": 48.05
+    }
+   },
+   {
+    "name": "Minagish",
+    "position": {
+     "lat": 29.02,
+     "lon": 47.55
+    }
+   },
+   {
+    "name": "Raudhatain",
+    "position": {
+     "lat": 29.83,
+     "lon": 47.68
+    }
+   },
+   {
+    "name": "Sabriya",
+    "position": {
+     "lat": 29.8,
+     "lon": 47.85
+    }
+   }
+  ],
+  "rules": {
+   "patienceRecoveryPerDay": 10,
+   "supportPerLossPermille": 3,
+   "supportFatiguePerDay": 1,
+   "supportPerObjectivePoint": 0.5,
+   "civilianHarmPer100Sorties": 0.4,
+   "stabilityPerLossPermille": 1,
+   "stabilityPer100StrategicSorties": 0.5,
+   "industryPer100Sorties": 10,
+   "industryRepairPerDay": 5,
+   "supportPerRetreatKillPermille": 2,
+   "scudHalfSuppressionSorties": 600,
+   "scudKillPerDay": 40,
+   "capitalPerDay": 5
+  }
+ }
 }

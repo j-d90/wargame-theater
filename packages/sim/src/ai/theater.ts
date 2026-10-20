@@ -19,6 +19,7 @@ import { activeFormations, frontier, isActive } from '../command/formations.ts';
 import { distanceKm, issueMove } from '../command/movement.ts';
 import { sideCombatPower } from '../combat/aggregate.ts';
 import { moveDepot } from '../supply/depots.ts';
+import { ceasefireInForce } from '../strategy/strategic.ts';
 
 /** Ticks between decisions: every hour at full competence, every 6 hours at none. */
 export function decisionInterval(competence: number): number {
@@ -29,7 +30,7 @@ export function aiPhase(world: WorldState): void {
   for (const id of sortedIds(world.sides)) {
     const side = world.sides[id]!;
     const ai = side.ai;
-    if (!ai || !ai.controlled || world.tick < ai.nextDecisionTick) continue;
+    if (!ai || !ai.controlled || world.tick < ai.nextDecisionTick || ceasefireInForce(world)) continue;
     ai.nextDecisionTick = world.tick + decisionInterval(ai.config.competence);
     if (ai.config.posture === 'offensive') offensive(world, side, ai);
     else defensive(world, side, ai);
@@ -114,10 +115,15 @@ function offensive(world: WorldState, side: SideState, ai: AiState) {
     if (ai.phase === 'prepare') {
       spreadOrders(world, ai, units, plan.assembly, 'move');
     } else {
+      // Pressing on past the mandate adds the pursuit objectives after the plan's own.
+      const pursuit = world.strategy?.pursuing[side.id]
+        ? (ai.config.strategy?.pursuit.find((p) => p.corps === plan.corps)?.objectives ?? [])
+        : [];
+      const objectives = [...plan.objectives, ...pursuit];
       let step = ai.planStep[plan.corps] ?? 0;
-      while (step < plan.objectives.length - 1 && world.objectives[plan.objectives[step]!]?.holder === side.id) step++;
+      while (step < objectives.length - 1 && world.objectives[objectives[step]!]?.holder === side.id) step++;
       ai.planStep[plan.corps] = step;
-      const objective = world.objectives[plan.objectives[step]!];
+      const objective = world.objectives[objectives[step]!];
       if (objective) spreadOrders(world, ai, units, objective.position, 'attack');
     }
     followWithDepot(world, plan.depot, units);
@@ -132,7 +138,10 @@ function defensive(world: WorldState, side: SideState, ai: AiState) {
       const h = world.objectives[id]?.holder;
       return h !== undefined && h !== null && h !== side.id;
     });
-    if (lost || powerRatio(world, side.id) * 1000 < d.withdrawBelow) ai.phase = 'withdraw';
+    // A regime that fears for its survival pulls back to save what it can.
+    const limit = ai.config.strategy?.withdrawWhenStabilityBelow;
+    const shaky = limit !== undefined && Object.values(world.strategy?.actors ?? {}).some((a) => a.side === side.id && a.stability !== null && a.stability < limit);
+    if (lost || shaky || powerRatio(world, side.id) * 1000 < d.withdrawBelow) ai.phase = 'withdraw';
   }
 
   if (ai.phase === 'withdraw') {
@@ -162,17 +171,34 @@ function defensive(world: WorldState, side: SideState, ai: AiState) {
   }
 }
 
+type TheaterAir = Pick<AirAllocation, 'counterAir' | 'interdiction' | 'attrition' | 'support'>;
+
 function allocateAir(world: WorldState, side: SideState, ai: AiState) {
   const air = side.air;
   if (!air) return;
-  let allocation: AirAllocation;
+  let base: TheaterAir;
   if (ai.config.posture === 'defensive') {
-    allocation = { counterAir: 700, interdiction: 0, attrition: 100, support: 200 };
+    base = { counterAir: 700, interdiction: 0, attrition: 100, support: 200 };
   } else {
     const enemyPool = Math.max(0, ...enemies(world, side.id).map((e) => world.sides[e]!.air?.pool ?? 0));
-    if (enemyPool > 350) allocation = { counterAir: 650, interdiction: 150, attrition: 200, support: 0 };
-    else if (ai.phase === 'prepare') allocation = { counterAir: 100, interdiction: 350, attrition: 550, support: 0 };
-    else allocation = { counterAir: 50, interdiction: 100, attrition: 450, support: 400 };
+    if (enemyPool > 350) base = { counterAir: 650, interdiction: 150, attrition: 200, support: 0 };
+    else if (ai.phase === 'prepare') base = { counterAir: 100, interdiction: 350, attrition: 550, support: 0 };
+    else base = { counterAir: 50, interdiction: 50, attrition: 600, support: 300 };
   }
-  air.allocation = allocation;
+  // Strategic missions come off the top; the theater missions share what's left.
+  const st = ai.config.strategy;
+  const m = world.strategy?.missiles;
+  const missilesFlying = m !== undefined && m !== null && m.side !== side.id && m.launchers >= 0.5;
+  const scudHunt = st && st.scudResponse === 'historical' && missilesFlying ? st.scudHuntShare : 0;
+  // Strategic bombing belongs to the air campaign; once the ground war starts, the air effort goes to the front.
+  const strategic = ai.phase === 'prepare' ? (st?.strategicBombing ?? 0) : 0;
+  const left = 1000 - scudHunt - strategic;
+  const scaled = {
+    counterAir: Math.floor((base.counterAir * left) / 1000),
+    interdiction: Math.floor((base.interdiction * left) / 1000),
+    attrition: Math.floor((base.attrition * left) / 1000),
+    support: Math.floor((base.support * left) / 1000),
+  };
+  scaled.counterAir += left - (scaled.counterAir + scaled.interdiction + scaled.attrition + scaled.support);
+  air.allocation = { ...scaled, scudHunt, strategic };
 }

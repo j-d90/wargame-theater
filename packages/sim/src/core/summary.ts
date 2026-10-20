@@ -7,7 +7,8 @@ import { combatPower, mobility, supplyLevel } from '../command/derived.ts';
 import { kmPerTick } from '../command/movement.ts';
 import { inSupplyRange, supplyDistance } from '../supply/flow.ts';
 import { fightingValue, sideCombatPower } from '../combat/aggregate.ts';
-import type { AiPhase, AirAllocation, FormationStatus, OrderKind } from './world.ts';
+import type { ActorState, AiPhase, AirAllocation, FormationStatus, MissileStrike, OrderKind, StrategicEvent } from './world.ts';
+import { actionStatus } from '../strategy/strategic.ts';
 import { TICKS_PER_DAY } from './time.ts';
 
 export interface FormationSummary {
@@ -74,7 +75,44 @@ export interface ObjectiveSummary {
   capturedTick: number | null;
 }
 
+export interface StrategySummary {
+  mode: 'realistic' | 'sandbox';
+  actors: Omit<ActorState, 'onIntervene' | 'onWithdraw' | 'restrictsSources' | 'restrictedTo' | 'nations' | 'refusesRegions'>[];
+  capital: Record<string, number>;
+  missiles: {
+    side: string;
+    launchers: number;
+    suppression: number;
+    fired: number;
+    hits: number;
+    patriotsAt: Record<string, number>;
+    patriotBatteries: number;
+    launchArea: Position;
+    targets: { id: string; name: string; kind: 'city' | 'military'; position: Position }[];
+    recent: MissileStrike[];
+  } | null;
+  ceasefire: { tick: number | null; reason: string | null };
+  liberatedTick: number | null;
+  pursuing: Record<string, boolean>;
+  oilFires: number | null;
+  oilFields: { name: string; position: Position }[];
+  /** Most recent first. */
+  log: StrategicEvent[];
+  actions: {
+    id: string;
+    name: string;
+    side: string;
+    description: string;
+    escalation: number;
+    cost: number;
+    available: boolean;
+    locked: boolean;
+    reason: string | null;
+  }[];
+}
+
 export interface WorldSummary {
+  strategy: StrategySummary | null;
   tick: number;
   day: number;
   hash: string;
@@ -112,13 +150,60 @@ export interface WorldSummary {
   }[];
 }
 
+const round = (v: number | null) => (v === null ? null : Math.round(v));
+
 export function summarize(world: WorldState): WorldSummary {
   const totals: Record<string, FormationStats> = {};
   for (const id of sortedIds(world.formations)) {
     if (world.formations[id]!.parentId === null) totals[id] = rollup(world, id);
   }
   const active = activeFormations(world);
+  const st = world.strategy;
   return {
+    strategy: st
+      ? {
+          mode: st.mode,
+          actors: sortedIds(st.actors).map((id) => {
+            const { onIntervene: _e, onWithdraw: _w, restrictsSources: _rs, restrictedTo: _rt, nations: _n, refusesRegions: _r, ...a } = st.actors[id]!;
+            return { ...a, support: round(a.support), cohesion: round(a.cohesion), patience: round(a.patience), stability: round(a.stability) };
+          }),
+          capital: Object.fromEntries(Object.entries(st.capital).map(([k, v]) => [k, Math.floor(v)])),
+          missiles: st.missiles
+            ? {
+                side: st.missiles.side,
+                launchers: Math.round(st.missiles.launchers),
+                suppression: st.missiles.suppression,
+                fired: st.missiles.fired,
+                hits: st.missiles.hits,
+                patriotsAt: { ...st.missiles.patriotsAt },
+                patriotBatteries: st.missiles.patriotBatteries,
+                launchArea: { ...st.missiles.launchArea },
+                targets: st.missiles.targets.map((t) => ({ id: t.id, name: t.name, kind: t.kind, position: { ...t.position } })),
+                recent: st.missiles.recent.map((x) => ({ ...x })),
+              }
+            : null,
+          ceasefire: { ...st.ceasefire },
+          liberatedTick: st.liberatedTick,
+          pursuing: { ...st.pursuing },
+          oilFires: st.oilFires,
+          oilFields: st.oilFields.map((o) => ({ name: o.name, position: { ...o.position } })),
+          log: st.log.slice(-80).reverse(),
+          actions: st.actions.map((a) => {
+            const status = actionStatus(world, a.side, a.id);
+            return {
+              id: a.id,
+              name: a.name,
+              side: a.side,
+              description: a.description,
+              escalation: a.escalation,
+              cost: a.cost,
+              available: status.available,
+              locked: status.locked,
+              reason: status.reason,
+            };
+          }),
+        }
+      : null,
     tick: world.tick,
     day: dayOf(world.tick),
     hash: hashState(world),

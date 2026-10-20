@@ -1,6 +1,6 @@
 import type { AirAllocation } from '@tow/sim';
 
-export const AIR_KEYS = ['counterAir', 'interdiction', 'attrition', 'support'] as const;
+export const AIR_KEYS = ['counterAir', 'interdiction', 'attrition', 'support', 'scudHunt', 'strategic'] as const;
 export type AirKey = (typeof AIR_KEYS)[number];
 
 /**

@@ -11,6 +11,7 @@ import { rngStream, type Formation, type WorldState } from '../core/world.ts';
 import { activeFormations } from '../command/formations.ts';
 import { combatPower } from '../command/derived.ts';
 import { distanceKm, issueMove, terrainCodeAt } from '../command/movement.ts';
+import { ceasefireInForce, noteRetreatLoss } from '../strategy/strategic.ts';
 
 /** Fighting value of a formation before modifiers: combat power x quality. */
 export function fightingValue(f: Formation): number {
@@ -63,6 +64,7 @@ export function applyLosses(world: WorldState, f: Formation, loss: number): numb
   s.stock = Math.min(s.stock, s.stockCap);
   const side = world.sides[f.side];
   if (side) side.losses += taken;
+  if (f.status === 'retreating' || f.order?.kind === 'retreat') noteRetreatLoss(world, f.side, taken);
   return taken;
 }
 
@@ -125,6 +127,11 @@ function fallBack(world: WorldState, f: Formation, enemies: Formation[], km: num
 }
 
 export function combatPhase(world: WorldState): void {
+  if (ceasefireInForce(world)) {
+    world.contacts = [];
+    for (const f of activeFormations(world)) f.inContact = false;
+    return;
+  }
   const r = world.rules;
   const units = activeFormations(world);
   const enemies = new Map<string, Formation[]>();

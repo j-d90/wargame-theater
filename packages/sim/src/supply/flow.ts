@@ -43,7 +43,9 @@ export function supplyPhase(world: WorldState): void {
 
   for (const id of nodeIds) {
     const n = nodes[id]!;
-    if (!n.disrupted && n.productionPerTick > 0) n.stock = Math.min(n.capacity, n.stock + n.productionPerTick);
+    if (!n.disrupted && n.productionPerTick > 0) {
+      n.stock = Math.min(n.capacity, n.stock + Math.floor((n.productionPerTick * n.industry) / 1000));
+    }
   }
 
   // Issue to formations within range of their node.
