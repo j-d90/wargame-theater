@@ -15,6 +15,7 @@ import { createRng, type RngState } from './rng.ts';
 import { DEFAULT_RULES, type Rules } from './rules.ts';
 import { TICKS_PER_DAY, tickAt } from './time.ts';
 import type { TimedCommand } from './commands.ts';
+import { observe, type Decision, type DecisionWatch } from './decisions.ts';
 import { activeFormations, aggregate, depthOf } from '../command/formations.ts';
 import { sideCombatPower } from '../combat/aggregate.ts';
 
@@ -219,6 +220,10 @@ export interface AiState {
   /** Last order key given to each formation, so orders aren't re-issued every decision. */
   issued: Record<string, string>;
   nextDecisionTick: number;
+  /** Formations the player has taken command of; the AI leaves them (and what is under them) alone. */
+  manual: string[];
+  /** When the conditions for a withdrawal were first met; a less competent command reacts later. */
+  withdrawSeenTick: number | null;
 }
 
 export interface SideState {
@@ -265,6 +270,8 @@ export interface StrategicEvent {
   tick: number;
   kind: 'info' | 'warning' | 'crisis';
   text: string;
+  /** Routine, recurring news (daily missile strikes, the mandate) that only the closest players stop for. */
+  routine?: boolean;
 }
 
 export interface MissileStrike {
@@ -357,6 +364,10 @@ export interface WorldState {
   battles: Record<string, BattleState>;
   /** Counter for battle ids. */
   nextBattle: number;
+  /** Moments that may need a player's attention, oldest first (see decisions.ts). */
+  decisions: Decision[];
+  /** What the decisions phase saw last tick, to notice changes. Null before the first tick. */
+  watch: DecisionWatch | null;
 }
 
 /** Ids of a record in sorted order. All sim iteration goes through this. */
@@ -521,6 +532,8 @@ export function createWorld(resolved: ResolvedScenario, options: CreateWorldOpti
     tactical: tacticalFor(resolved, formations),
     battles: {},
     nextBattle: 1,
+    decisions: [],
+    watch: null,
   };
 
   for (const s of scenario.sides) {
@@ -549,6 +562,8 @@ export function createWorld(resolved: ResolvedScenario, options: CreateWorldOpti
             planStep: {},
             issued: {},
             nextDecisionTick: 0,
+            manual: [],
+            withdrawSeenTick: null,
           }
         : null,
       initialStrength: 0,
@@ -583,6 +598,7 @@ export function createWorld(resolved: ResolvedScenario, options: CreateWorldOpti
       .reduce((sum, f) => sum + f.stats.strength, 0);
     side.initialCombatPower = sideCombatPower(world, side.id);
   }
+  observe(world);
   return world;
 }
 

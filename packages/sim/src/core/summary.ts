@@ -4,6 +4,7 @@ import { dayOf } from './time.ts';
 import { sortedIds, type FormationStats, type WorldState } from './world.ts';
 import { alive, effectiveSupplyNode, frontier, rollup, theaterUnits } from '../command/formations.ts';
 import { rangeOf } from '../combat/battle.ts';
+import type { Decision } from './decisions.ts';
 import type { Formation } from './world.ts';
 import { combatPower, mobility, supplyLevel } from '../command/derived.ts';
 import { kmPerTick } from '../command/movement.ts';
@@ -152,6 +153,8 @@ export interface WorldSummary {
   objectives: ObjectiveSummary[];
   battles: BattleSummary[];
   tactical: TacticalSummary | null;
+  /** The most recent decision points, oldest first. */
+  decisions: Decision[];
   /** Midpoints of formations in contact, for drawing engagements. */
   engagements: { a: string; b: string; position: Position }[];
   active: FormationSummary[];
@@ -355,6 +358,7 @@ export function summarize(world: WorldState, options: SummaryOptions = {}): Worl
       return { id, name: o.name, position: { ...o.position }, holder: o.holder, radiusKm: o.radiusKm, points: o.points, capturedTick: o.capturedTick };
     }),
     battles: sortedIds(world.battles).map((id) => battleSummary(world, id)),
+    decisions: world.decisions.slice(-40).map((d) => ({ ...d, at: d.at ? { ...d.at } : null })),
     tactical: options.battle ? tacticalSummary(world, options.battle) : null,
     engagements: world.contacts.flatMap(([a, b]) => {
       const fa = world.formations[a];

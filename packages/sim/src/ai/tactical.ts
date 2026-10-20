@@ -21,8 +21,14 @@ import { SpatialGrid, isRear, rangeOf } from '../combat/battle.ts';
 
 /** How far an attacking battalion looks for a target, km. */
 const ENGAGE_KM = 15;
-/** Each battalion reconsiders its orders every this many ticks, staggered, to spread the work. */
-const DECIDE_EVERY = 4;
+/**
+ * Each battalion reconsiders its orders every few ticks, staggered to spread
+ * the work: every half hour under a fully competent command, every two hours
+ * under the least. A side without an AI (the player's) uses every hour.
+ */
+export function tacticalInterval(competence: number | null): number {
+  return competence === null ? 4 : 2 + Math.round(((1000 - competence) * 6) / 1000);
+}
 
 /** Order unless the battalion already has much the same order. */
 function order(world: WorldState, f: Formation, to: Position, kind: OrderKind): void {
@@ -58,6 +64,7 @@ export function tacticalPhase(world: WorldState, members: Map<string, string>): 
       if (parts.length === 0 || (parts.length === 1 && parts[0] === root)) continue;
       // A side without an AI is the player's.
       const aiSide = world.sides[root.side]?.ai?.controlled ?? false;
+      const every = tacticalInterval(world.sides[root.side]?.ai?.config.competence ?? null);
       const intent = root.order;
       const cx = parts.reduce((s, p) => s + p.position.x, 0) / parts.length;
       const cy = parts.reduce((s, p) => s + p.position.y, 0) / parts.length;
@@ -69,7 +76,7 @@ export function tacticalPhase(world: WorldState, members: Map<string, string>): 
         const pi = index.get(p.id) ?? 0;
         // An order to retreat is acted on at once; otherwise battalions take turns.
         const fresh = intent?.kind === 'retreat' && p.order?.kind !== 'retreat';
-        if (!fresh && (pi + world.tick) % DECIDE_EVERY !== 0) continue;
+        if (!fresh && (pi + world.tick) % every !== 0) continue;
         if (!intent) {
           hold(p);
           continue;

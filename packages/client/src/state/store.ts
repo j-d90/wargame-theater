@@ -1,10 +1,11 @@
 // A tiny external store: React panels read it through useApp, the Pixi view
 // subscribes to it directly so map redraws never go through React.
 import { useSyncExternalStore } from 'react';
-import type { WorldSummary } from '@tow/sim';
+import type { Decision, WorldSummary } from '@tow/sim';
 import type { Selection } from '../views/theater/hit.ts';
 import type { Mode } from '../views/theater/TheaterView.ts';
-import type { ScenarioInfo, SpeedSetting } from '../worker/protocol.ts';
+import type { DepthPreset, ReplayInfo, ScenarioChoice, ScenarioInfo, SpeedSetting } from '../worker/protocol.ts';
+import type { SaveRecord } from './saves.ts';
 
 export interface Message {
   id: number;
@@ -13,6 +14,19 @@ export interface Message {
 }
 
 export interface AppState {
+  /** The start screen, a game, or a replay of a saved one. */
+  phase: 'setup' | 'playing' | 'replay';
+  scenarios: ScenarioChoice[];
+  saves: SaveRecord[];
+  depth: DepthPreset;
+  /** Auto-resolving to the next decision. */
+  resolving: boolean;
+  /** The decision the clock last stopped for. */
+  lastStop: Decision | null;
+  replay: ReplayInfo | null;
+  showHelp: boolean;
+  /** The end-of-campaign summary has been seen and closed. */
+  endSeen: boolean;
   scenario: ScenarioInfo | null;
   summary: WorldSummary | null;
   /** The side the player commands; null when there is only one side or none chosen. */
@@ -59,6 +73,15 @@ export function createStore<T>(initial: T) {
 }
 
 export const store = createStore<AppState>({
+  phase: 'setup',
+  scenarios: [],
+  saves: [],
+  depth: 'operational',
+  resolving: false,
+  lastStop: null,
+  replay: null,
+  showHelp: false,
+  endSeen: false,
   scenario: null,
   summary: null,
   playerSide: null,

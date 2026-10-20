@@ -34,7 +34,9 @@ export function strategicAiPhase(world: WorldState): void {
       }
       for (const a of actions.filter((x) => x.kind === 'pressure')) {
         const target = a.target ? s.actors[a.target] : undefined;
-        if (target?.status === 'neutral' && target.patience !== null && target.patience < 700) tryAction(world, id, a.id);
+        // A sharper command presses sooner: at 70% patience when fully competent, 50% at none.
+        const threshold = 500 + side.ai.config.competence / 5;
+        if (target?.status === 'neutral' && target.patience !== null && target.patience < threshold) tryAction(world, id, a.id);
       }
     }
     const withdrawing = side.ai.phase === 'withdraw';

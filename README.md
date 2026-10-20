@@ -14,7 +14,9 @@ The full design is in [docs/design.md](docs/design.md). Standing rules for contr
 
 - **M5 (tactical layer and level switching): complete.** Any battle can be fought battalion by battalion: divisions break down into their brigades and battalions (from cited, simplified compositions), deploy facing the enemy, and fight with the same formula as aggregate combat, so a detailed battle and an auto-resolved one agree (`npm run tactical-check`). Zoom in on a battle and back out mid-game; the switch takes well under 200 ms.
 
-The next milestone is M6: the depth dial and polish (time controls, auto-resolve to the next decision, saves and replays, AI competence settings).
+- **M6 (depth dial and polish): complete.** A start screen to choose the scenario, your side, the depth and the enemy's competence. The simulation notes decision points (contact, objectives changing hands, offensives, strategic choices, crises), and **Next decision** skips ahead to the next one that needs you. Three depth presets: **Quick** (your generals fight; you make the big calls: about 10 minutes), **Operational** (a few hours) and **Commander** (every order and every stop: many hours). Saves (named slots, autosave, export and import), and replays with a timeline you can scrub. AI competence (Green to Elite) changes how a command fights.
+
+v0 is complete. Later: more wars and eras, brigade-level orders of battle, 3D, and the remaining performance work for very large battles.
 
 ## Getting started
 
@@ -29,13 +31,16 @@ npm run calibrate             # run 20 seeds and check the results are plausible
 npm run experiments           # compare strategic choices across 20 seeds
 npm run tactical-check        # detailed battles vs auto-resolve on standard engagements
 npm run calibrate -- --detailed   # the campaign with every battle fought in detail
+npm run replay -- save.json   # replay an exported save headless and check it matches
 npm run dev                   # start the client at http://localhost:5173
 ```
 
-The client opens the `desert-storm` scenario with you commanding the Coalition and the AI running Iraq. Add `?scenario=gulf-sandbox` or `?scenario=tiny` to the URL for the test scenarios, or `?side=iraq` to command Iraq.
+The client opens on a start screen: pick a scenario, your side, the depth and the enemy's competence, or continue a saved game. To skip it, add `?scenario=desert-storm` (or `gulf-sandbox`, `tiny`) to the URL, optionally with `&side=iraq` and `&depth=quick|operational|commander`.
 
 ### Playing
 
+- **Depth and time:** `Space` pauses; `1`–`5` run at 15 game minutes, 1 hour, 6 hours or 1 day per second, or as fast as possible; `.` runs one hour. **Next decision** (`N`) skips ahead until something needs you, and the clock also stops by itself for those moments; what counts depends on the depth, which you can change at any time from the top bar. In Quick the AI commands your forces; in Operational it carries on for you while you skip ahead. `?` lists every shortcut.
+- **Saves and replays:** **Menu → Save game** or **Export save file**; the game also autosaves about once a game day and when you quit. From the start screen, **Replay** plays a saved game from the beginning: scrub the timeline or click a marker to jump to a decision point.
 - **Strategic and Theater:** switch command levels with the tabs in the top bar. The strategic view shows each government's gauges, the missile campaign, your strategic options (locked ones say why), the rules mode, and the event log. The clock pauses when a cease-fire is declared.
 - **Desert Storm:** you command the Coalition's divisions and its air effort (the sliders in the side panel). Tick **AI commands the Coalition** to hand over and watch the campaign auto-resolve. Enemy units, engagements (orange bursts) and objectives (diamonds in the holder's colour) are all on the map. Fog of war comes later.
 
@@ -45,7 +50,6 @@ The client opens the `desert-storm` scenario with you commanding the Coalition a
 - **Expand / Collapse:** split a division into its brigades, or merge them back.
 - **Cut link / Disrupt:** select a supply line or depot and cut it. Units downstream use up the supply they carry, then lose readiness, morale and speed.
 - A unit more than 150 km from its depot gets no supply. It's drawn with a red marker and a dashed red line back to its depot.
-- Time: `Space` pauses. `1`, `2` and `3` run at 1 game hour, 6 game hours, or 1 game day per second.
 
 The headless runner prints a state summary at the end of each game day:
 
@@ -77,6 +81,7 @@ tools/       Headless scenario runner
   calibrate.ts  Desert Storm plausibility check across seeds
   experiments.ts  M4 experiments: strategic choices vs theater outcomes
   tactical-check.ts  M5 check: detailed battles vs auto-resolve
+  replay.ts     headless replay of a save file
   geo/       Map builder (npm run build:map)
 docs/        Design document
 ```
@@ -92,6 +97,7 @@ docs/        Design document
 - **Combat and AI.** Opposing formations in contact fight Lanchester-style: losses scale with the enemy's combat power, quality and air support, reduced by terrain and fortification. Broken units fall back, then surrender. Each side's AI works at corps level and turns intents ("take this objective") into division orders, as the design describes.
 - **Two resolvers, one answer.** A battle fought in detail uses the same fire formula as aggregate combat, per battalion and only against enemies within range, with morale shared across each division. When everyone is in range the two give the same result; geometry (range, concentration, standoff) is the only difference. Generated battalions split their division's stats exactly, so collapsing them back gives the division they came from.
 - **Strategy shapes the war.** The strategic layer is part of the same deterministic simulation. Missile hits wear down a neutral's patience, partners who lose faith take their divisions (and, for a host nation, its air bases) home, and home support decides how long a war can last. In realistic mode the rules engine enforces escalation locks and legal limits; sandbox mode lifts them, but their consequences still apply.
+- **Saves are a log.** A save holds a snapshot of the world and every order given since the start. Loading uses the snapshot; replaying the log from the scenario and seed must reproduce it exactly, which is how replays work and how old saves are rebuilt.
 - **Views never touch the world.** The sim runs in a Web Worker. The UI sends orders as commands and draws the snapshots that come back.
 
 ## Map data

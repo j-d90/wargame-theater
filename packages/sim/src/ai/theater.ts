@@ -13,13 +13,19 @@
 // objectives fall.
 
 import type { Position } from '@tow/content';
-import { dayOf } from '../core/time.ts';
-import { sortedIds, type AiState, type AirAllocation, type Formation, type OrderKind, type SideState, type WorldState } from '../core/world.ts';
+import { TICKS_PER_DAY, dayOf } from '../core/time.ts';
+import { nextInt } from '../core/rng.ts';
+import { rngStream, sortedIds, type AiState, type AirAllocation, type Formation, type OrderKind, type SideState, type WorldState } from '../core/world.ts';
 import { activeFormations, commandFrontier, isActive, theaterUnits } from '../command/formations.ts';
 import { distanceKm, issueMove } from '../command/movement.ts';
 import { sideCombatPower } from '../combat/aggregate.ts';
 import { moveDepot } from '../supply/depots.ts';
 import { ceasefireInForce } from '../strategy/strategic.ts';
+
+/** Ticks before a command acts on the need to withdraw: none at full competence, a day at none. */
+export function withdrawDelay(competence: number): number {
+  return Math.round(((1000 - competence) * TICKS_PER_DAY) / 1000);
+}
 
 /** Ticks between decisions: every hour at full competence, every 6 hours at none. */
 export function decisionInterval(competence: number): number {
@@ -53,8 +59,19 @@ function commandUnits(world: WorldState, id: string): Formation[] {
   return commandFrontier(world, id).filter((f) => (isActive(world, f.id) || f.battle !== null) && f.status === 'active');
 }
 
+/** Whether the player has taken command of `f` or a formation above it. */
+export function underPlayer(world: WorldState, ai: AiState, f: Formation): boolean {
+  if (ai.manual.length === 0) return false;
+  for (let g: Formation | undefined = f; g; g = g.parentId === null ? undefined : world.formations[g.parentId]) {
+    if (ai.manual.includes(g.id)) return true;
+  }
+  return false;
+}
+
 /** Order a formation somewhere unless it already has that order. Returns false if it can't go. */
 function order(world: WorldState, ai: AiState, f: Formation, to: Position, kind: OrderKind, gridKm = 5): boolean {
+  // The player's own formations take no orders from the AI.
+  if (underPlayer(world, ai, f)) return true;
   const key = `${kind}:${Math.round(to.x / gridKm)}:${Math.round(to.y / gridKm)}`;
   if (ai.issued[f.id] === key && (f.order !== null || distanceKm(f.position, to) < gridKm)) return true;
   try {
@@ -134,14 +151,24 @@ function defensive(world: WorldState, side: SideState, ai: AiState) {
   const d = ai.config.defensive;
   if (!d) return;
   if (ai.phase === 'defend') {
+    // An able command sees the threat coming: it treats a key objective as lost once
+    // attacking enemies close on it (from 40 km out at full competence, not at all at half).
+    const warningKm = (Math.max(0, ai.config.competence - 500) * 40) / 500;
+    const foes = warningKm > 0 ? theaterUnits(world).filter((f) => f.side !== side.id && (f.inContact || f.order?.kind === 'attack')) : [];
     const lost = d.withdrawWhenLost.some((id) => {
-      const h = world.objectives[id]?.holder;
-      return h !== undefined && h !== null && h !== side.id;
+      const o = world.objectives[id];
+      if (!o) return false;
+      if (o.holder !== null && o.holder !== side.id) return true;
+      return foes.some((f) => distanceKm(f.position, o.position) <= o.radiusKm + warningKm);
     });
     // A regime that fears for its survival pulls back to save what it can.
     const limit = ai.config.strategy?.withdrawWhenStabilityBelow;
     const shaky = limit !== undefined && Object.values(world.strategy?.actors ?? {}).some((a) => a.side === side.id && a.stability !== null && a.stability < limit);
-    if (lost || shaky || powerRatio(world, side.id) * 1000 < d.withdrawBelow) ai.phase = 'withdraw';
+    if (lost || shaky || powerRatio(world, side.id) * 1000 < d.withdrawBelow) {
+      // A less competent command takes up to a day to see it has to go.
+      ai.withdrawSeenTick ??= world.tick;
+      if (world.tick - ai.withdrawSeenTick >= withdrawDelay(ai.config.competence)) ai.phase = 'withdraw';
+    }
   }
 
   if (ai.phase === 'withdraw') {
@@ -184,6 +211,15 @@ function allocateAir(world: WorldState, side: SideState, ai: AiState) {
     if (enemyPool > 350) base = { counterAir: 650, interdiction: 150, attrition: 200, support: 0 };
     else if (ai.phase === 'prepare') base = { counterAir: 100, interdiction: 350, attrition: 550, support: 0 };
     else base = { counterAir: 50, interdiction: 50, attrition: 600, support: 300 };
+  }
+  // A less competent staff misjudges the air plan: each share is off by up to 30% of what competence lacks.
+  const slack = Math.round((1000 - ai.config.competence) * 0.3);
+  if (slack > 0) {
+    const rng = rngStream(world, `ai:${side.id}`);
+    const keys = ['counterAir', 'interdiction', 'attrition', 'support'] as const;
+    const noisy = keys.map((k) => Math.max(0, base[k] + nextInt(rng, -slack, slack)));
+    const total = noisy.reduce((a, b) => a + b, 0) || 1;
+    keys.forEach((k, i) => (base[k] = Math.floor((noisy[i]! * 1000) / total)));
   }
   // Strategic missions come off the top; the theater missions share what's left.
   const st = ai.config.strategy;

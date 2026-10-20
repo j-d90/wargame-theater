@@ -69,6 +69,12 @@ export const POLICIES = {
   pursue: (raw: ScenarioInput) => {
     coalitionStrategy(raw).pursueAfterLiberation = true;
   },
+  eliteIraq: (raw: ScenarioInput) => {
+    raw.sides!.find((s) => s.id === 'iraq')!.ai!.competence = 1000;
+  },
+  greenIraq: (raw: ScenarioInput) => {
+    raw.sides!.find((s) => s.id === 'iraq')!.ai!.competence = 250;
+  },
 } satisfies Record<string, (raw: ScenarioInput) => void>;
 
 /** Commands that open a detailed battle for every contact not yet fought in detail (the M5 campaign check). */
@@ -219,6 +225,18 @@ export const EXPERIMENTS: Experiment[] = [
       `governments withdrawn ${d(avg(a, (m) => m.withdrawnActors.length))} vs ${d(avg(b, (m) => m.withdrawnActors.length))}; ` +
       `coalition losses ${p(avg(a, (m) => m.coalitionLossShare))} vs ${p(avg(b, (m) => m.coalitionLossShare))}; ` +
       `Republican Guard left ${p(avg(a, (m) => m.rgLeft))} vs ${p(avg(b, (m) => m.rgLeft))}`,
+  },
+  {
+    name: 'Elite vs green Iraqi command',
+    a: POLICIES.eliteIraq,
+    b: POLICIES.greenIraq,
+    // An able command sees the blow coming and pulls back in time: more of the army survives
+    // and fewer surrender, at the price of giving up ground sooner.
+    shows: (a, b) => a.iraqPowerLeft > b.iraqPowerLeft && a.iraqSurrenderShare < b.iraqSurrenderShare,
+    describe: (a, b) =>
+      `Iraqi power left ${p(avg(a, (m) => m.iraqPowerLeft))} vs ${p(avg(b, (m) => m.iraqPowerLeft))}; ` +
+      `surrender share ${p(avg(a, (m) => m.iraqSurrenderShare))} vs ${p(avg(b, (m) => m.iraqSurrenderShare))}; ` +
+      `Kuwait City day ${d(avg(a, kcDay))} vs ${d(avg(b, kcDay))}`,
   },
 ];
 

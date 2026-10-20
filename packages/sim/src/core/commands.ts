@@ -23,7 +23,11 @@ export type Command =
   | { type: 'openBattle'; formation: string }
   | { type: 'closeBattle'; battle: string }
   /** A direct order to a unit inside a detailed battle; 'auto' hands it back to tactical AI. */
-  | { type: 'tacticalOrder'; formation: string; order: 'move' | 'attack' | 'hold' | 'auto'; to?: Position };
+  | { type: 'tacticalOrder'; formation: string; order: 'move' | 'attack' | 'hold' | 'auto'; to?: Position }
+  /** How well a side's AI commands, 0..1000. */
+  | { type: 'setAiCompetence'; side: string; competence: number }
+  /** Take a formation (and everything under it) from the AI, or hand it back. */
+  | { type: 'setFormationControl'; formation: string; player: boolean };
 
 export type TimedCommand = Command & { tick: number };
 
@@ -108,6 +112,22 @@ export function applyCommand(world: WorldState, cmd: Command): void {
       refuseInBattle(world, cmd.formation, 'aggregate');
       aggregate(world, cmd.formation);
       return;
+    case 'setAiCompetence': {
+      const ai = world.sides[cmd.side]?.ai;
+      if (!ai) throw new Error(`setAiCompetence: side "${cmd.side}" has no AI`);
+      if (!Number.isInteger(cmd.competence) || cmd.competence < 0 || cmd.competence > 1000) throw new Error('setAiCompetence: competence must be a whole number from 0 to 1000');
+      ai.config = { ...ai.config, competence: cmd.competence };
+      return;
+    }
+    case 'setFormationControl': {
+      const f = world.formations[cmd.formation];
+      if (!f) throw new Error(`setFormationControl: unknown formation "${cmd.formation}"`);
+      const ai = world.sides[f.side]?.ai;
+      if (!ai) throw new Error(`setFormationControl: ${world.sides[f.side]?.name ?? f.side} has no AI to hand it to`);
+      ai.manual = cmd.player ? [...new Set([...ai.manual, f.id])].sort() : ai.manual.filter((id) => id !== f.id);
+      if (cmd.player) delete ai.issued[f.id];
+      return;
+    }
     case 'openBattle':
       openBattle(world, cmd.formation);
       return;

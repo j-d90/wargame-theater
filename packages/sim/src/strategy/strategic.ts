@@ -15,8 +15,8 @@ import { theaterUnits } from '../command/formations.ts';
 
 const clamp = (v: number) => Math.max(0, Math.min(1000, v));
 
-export function log(world: WorldState, kind: 'info' | 'warning' | 'crisis', text: string): void {
-  world.strategy?.log.push({ tick: world.tick, kind, text });
+export function log(world: WorldState, kind: 'info' | 'warning' | 'crisis', text: string, routine = false): void {
+  world.strategy?.log.push({ tick: world.tick, kind, text, ...(routine ? { routine: true } : {}) });
 }
 
 /** Region (country) at a position, or null off the map or without region data. */
@@ -269,7 +269,7 @@ function dailyGauges(world: WorldState, s: StrategyState) {
         const a = s.actors[id];
         if (a?.cohesion != null && a.status === 'active') a.cohesion = clamp(a.cohesion - perDay * beyond);
       }
-      log(world, 'warning', `${beyond} ${world.sides[m.side]?.name ?? m.side} formations are operating beyond the mandate.`);
+      log(world, 'warning', `${beyond} ${world.sides[m.side]?.name ?? m.side} formations are operating beyond the mandate.`, true);
     }
   }
 
@@ -320,7 +320,7 @@ function missiles(world: WorldState, s: StrategyState) {
     const c = counts.get(t.id);
     if (!c) continue;
     const n = c.hits + c.intercepted;
-    log(world, t.kind === 'city' ? 'warning' : 'info', `${n} missile${n > 1 ? 's' : ''} fired at ${t.name}${c.intercepted ? `, ${c.intercepted} intercepted` : ''}.`);
+    log(world, t.kind === 'city' ? 'warning' : 'info', `${n} missile${n > 1 ? 's' : ''} fired at ${t.name}${c.intercepted ? `, ${c.intercepted} intercepted` : ''}.`, true);
   }
 }
 

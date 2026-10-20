@@ -7,6 +7,8 @@ export * from './core/world.ts';
 export * from './core/commands.ts';
 export * from './core/tick.ts';
 export * from './core/summary.ts';
+export * from './core/decisions.ts';
+export * from './core/save.ts';
 export * from './command/formations.ts';
 export * from './command/derived.ts';
 export * from './supply/flow.ts';

@@ -311,7 +311,7 @@ function Overview({ summary }: { summary: WorldSummary }) {
     <section className="panel-body">
       <p className="muted">{description}</p>
       <p className="help">
-        Click a unit, depot, or supply line to inspect it. Drag to pan, scroll or pinch to zoom. <kbd>Space</kbd> pauses, <kbd>1</kbd>–<kbd>3</kbd> set speed.
+        Click a unit, depot, or supply line to inspect it. Drag to pan, scroll or pinch to zoom. <kbd>Space</kbd> pauses, <kbd>1</kbd>–<kbd>5</kbd> set speed, <kbd>N</kbd> skips to the next decision, <kbd>?</kbd> lists every shortcut.
       </p>
       {summary.sides.length > 1 && <Campaign summary={summary} />}
       <h3>{summary.sides.length > 1 ? 'Your formations' : 'Formations'}</h3>
