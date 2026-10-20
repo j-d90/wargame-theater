@@ -15,7 +15,7 @@
 import type { Position } from '@tow/content';
 import { dayOf } from '../core/time.ts';
 import { sortedIds, type AiState, type AirAllocation, type Formation, type OrderKind, type SideState, type WorldState } from '../core/world.ts';
-import { activeFormations, frontier, isActive } from '../command/formations.ts';
+import { activeFormations, commandFrontier, isActive, theaterUnits } from '../command/formations.ts';
 import { distanceKm, issueMove } from '../command/movement.ts';
 import { sideCombatPower } from '../combat/aggregate.ts';
 import { moveDepot } from '../supply/depots.ts';
@@ -47,10 +47,10 @@ function powerRatio(world: WorldState, side: string): number {
   return s.initialCombatPower > 0 ? sideCombatPower(world, side) / s.initialCombatPower : 0;
 }
 
-/** Active formations standing for a command's subtree that can take orders. */
+/** Formations standing for a command's subtree that can take orders (a formation in a detailed battle counts as one). */
 function commandUnits(world: WorldState, id: string): Formation[] {
   if (!world.formations[id]) return [];
-  return frontier(world, id).filter((f) => isActive(world, f.id) && f.status === 'active');
+  return commandFrontier(world, id).filter((f) => (isActive(world, f.id) || f.battle !== null) && f.status === 'active');
 }
 
 /** Order a formation somewhere unless it already has that order. Returns false if it can't go. */
@@ -145,7 +145,7 @@ function defensive(world: WorldState, side: SideState, ai: AiState) {
   }
 
   if (ai.phase === 'withdraw') {
-    const own = activeFormations(world).filter((f) => f.side === side.id);
+    const own = theaterUnits(world).filter((f) => f.side === side.id);
     own.forEach((f, i) => {
       // Spread arrivals over a 40 km box so they don't all aim at one point.
       const to = { x: d.withdrawTo.x + ((i % 5) - 2) * 10, y: d.withdrawTo.y + ((Math.floor(i / 5) % 5) - 2) * 10 };

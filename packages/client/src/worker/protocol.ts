@@ -24,10 +24,15 @@ export interface ScenarioInfo {
 export type ToWorker =
   | { type: 'init'; scenario: string }
   | { type: 'command'; command: Command }
-  | { type: 'speed'; speed: SpeedSetting };
+  | { type: 'speed'; speed: SpeedSetting }
+  /** Fight the battle this formation is in at battalion level, and watch it. */
+  | { type: 'openBattle'; formation: string }
+  /** Include this battle's battalions in snapshots (null: none). */
+  | { type: 'watch'; battle: string | null };
 
 export type FromWorker =
   | { type: 'ready'; scenario: ScenarioInfo }
+  | { type: 'battleOpened'; battle: string }
   | { type: 'snapshot'; summary: WorldSummary; speed: SpeedSetting }
   | { type: 'rejected'; command: Command; reason: string }
   | { type: 'error'; message: string };

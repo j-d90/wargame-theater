@@ -11,7 +11,7 @@ import type { Effects, Position, StrategicActionSpec } from '@tow/content';
 import { nextFloat } from '../core/rng.ts';
 import { TICKS_PER_DAY, dayOf } from '../core/time.ts';
 import { rngStream, sortedIds, type ActorState, type Formation, type StrategyState, type WorldState } from '../core/world.ts';
-import { activeFormations } from '../command/formations.ts';
+import { theaterUnits } from '../command/formations.ts';
 
 const clamp = (v: number) => Math.max(0, Math.min(1000, v));
 
@@ -263,7 +263,7 @@ function dailyGauges(world: WorldState, s: StrategyState) {
   // Forces beyond the mandate strain the partners who signed up only for it.
   const m = s.mandate;
   if (m && !ceasefireInForce(world)) {
-    const beyond = activeFormations(world).filter((f) => f.side === m.side && beyondMandate(world, m.side, f.position)).length;
+    const beyond = theaterUnits(world).filter((f) => f.side === m.side && beyondMandate(world, m.side, f.position)).length;
     if (beyond > 0) {
       for (const [id, perDay] of Object.entries(m.cohesionPerFormationDay)) {
         const a = s.actors[id];

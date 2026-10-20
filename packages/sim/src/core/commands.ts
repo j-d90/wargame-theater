@@ -1,6 +1,7 @@
 import type { Position } from '@tow/content';
 import type { WorldState } from './world.ts';
-import { aggregate, expand, frontier } from '../command/formations.ts';
+import { aggregate, battleRootOf, expand, frontier } from '../command/formations.ts';
+import { closeBattle, openBattle } from '../combat/battle.ts';
 import { issueMove } from '../command/movement.ts';
 import { moveDepot } from '../supply/depots.ts';
 import { log, takeAction } from '../strategy/strategic.ts';
@@ -17,14 +18,26 @@ export type Command =
   | { type: 'setAiControl'; side: string; controlled: boolean }
   | { type: 'strategicAction'; side: string; action: string }
   | { type: 'setRulesMode'; mode: 'realistic' | 'sandbox' }
-  | { type: 'setDisrupted'; target: { kind: 'node' | 'link'; id: string }; disrupted: boolean };
+  | { type: 'setDisrupted'; target: { kind: 'node' | 'link'; id: string }; disrupted: boolean }
+  /** Fight the battle `formation` is in at battalion level. */
+  | { type: 'openBattle'; formation: string }
+  | { type: 'closeBattle'; battle: string }
+  /** A direct order to a unit inside a detailed battle; 'auto' hands it back to tactical AI. */
+  | { type: 'tacticalOrder'; formation: string; order: 'move' | 'attack' | 'hold' | 'auto'; to?: Position };
 
 export type TimedCommand = Command & { tick: number };
+
+/** Expanding or collapsing part of a detailed battle would pull units out from under it. */
+function refuseInBattle(world: WorldState, id: string, verb: string) {
+  const f = world.formations[id];
+  if (f && battleRootOf(world, id)) throw new Error(`${verb}: "${f.name}" is fighting a detailed battle; close the battle first`);
+}
 
 /** Apply a command. Invalid commands throw before changing anything. */
 export function applyCommand(world: WorldState, cmd: Command): void {
   switch (cmd.type) {
     case 'expand': {
+      refuseInBattle(world, cmd.formation, 'expand');
       const f = world.formations[cmd.formation];
       const order = f?.order ?? null;
       expand(world, cmd.formation);
@@ -92,8 +105,32 @@ export function applyCommand(world: WorldState, cmd: Command): void {
       return;
     }
     case 'aggregate':
+      refuseInBattle(world, cmd.formation, 'aggregate');
       aggregate(world, cmd.formation);
       return;
+    case 'openBattle':
+      openBattle(world, cmd.formation);
+      return;
+    case 'closeBattle':
+      closeBattle(world, cmd.battle);
+      return;
+    case 'tacticalOrder': {
+      const f = world.formations[cmd.formation];
+      if (!f) throw new Error(`tacticalOrder: unknown formation "${cmd.formation}"`);
+      const root = battleRootOf(world, f.id);
+      if (!root || root === f) throw new Error(`tacticalOrder: "${f.name}" is not a unit in a detailed battle`);
+      if (cmd.order === 'auto') {
+        f.manual = false;
+      } else if (cmd.order === 'hold') {
+        f.order = null;
+        f.manual = true;
+      } else {
+        if (!cmd.to) throw new Error('tacticalOrder: move and attack need a destination');
+        issueMove(world, f.id, cmd.to, cmd.order, false);
+        f.manual = true;
+      }
+      return;
+    }
     case 'setDisrupted': {
       const { kind, id } = cmd.target;
       const target = kind === 'node' ? world.supply.nodes[id] : world.supply.links[id];

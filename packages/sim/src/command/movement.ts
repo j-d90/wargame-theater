@@ -6,7 +6,7 @@
 import type { Position } from '@tow/content';
 import { TICKS_PER_DAY } from '../core/time.ts';
 import type { Formation, OrderKind, TerrainGrid, WorldState } from '../core/world.ts';
-import { activeFormations, isActive } from './formations.ts';
+import { activeFormations, battleRootOf, isActive } from './formations.ts';
 import { mobility } from './derived.ts';
 import { movementRefusal } from '../strategy/strategic.ts';
 
@@ -182,15 +182,18 @@ export function planPath(world: WorldState, from: Position, to: Position, avoid?
   return path;
 }
 
-/** Give an active formation a move order. Throws if it can't go there. */
-export function issueMove(world: WorldState, id: string, to: Position, kind: OrderKind = 'move'): void {
+/**
+ * Give an active formation a move order. Throws if it can't go there. A
+ * formation fighting a detailed battle takes it as intent for its battalions.
+ */
+export function issueMove(world: WorldState, id: string, to: Position, kind: OrderKind = 'move', avoidEnemies = true): void {
   const f = world.formations[id];
   if (!f) throw new Error(`move: unknown formation "${id}"`);
-  if (!isActive(world, id)) throw new Error(`move: "${f.name}" is not an active formation (it is expanded or hidden)`);
+  if (!isActive(world, id) && f.battle === null) throw new Error(`move: "${f.name}" is not an active formation (it is expanded or hidden)`);
   const refusal = movementRefusal(world, f, to);
   if (refusal) throw new Error(`move: ${refusal}`);
   // Except when attacking, steer clear of known enemy formations.
-  const enemies = kind === 'attack' ? [] : activeFormations(world).filter((e) => e.side !== f.side);
+  const enemies = kind === 'attack' || !avoidEnemies ? [] : activeFormations(world).filter((e) => e.side !== f.side);
   const avoid = enemies.length > 0 ? { points: enemies.map((e) => e.position), radiusKm: 30, factor: 8 } : undefined;
   const path = planPath(world, f.position, to, avoid);
   if (!path) throw new Error(`move: "${f.name}" can't reach that point (water, off the map, or cut off)`);
@@ -210,7 +213,8 @@ export function movementPhase(world: WorldState): void {
     const order = f.order;
     if (!order) continue;
     // Contact pins a formation in place until one side gives way; only a retreat breaks off.
-    if (f.inContact && order.kind !== 'retreat') continue;
+    // In a detailed battle, tactical AI decides how close its battalions go.
+    if (f.inContact && order.kind !== 'retreat' && (f.manual || battleRootOf(world, f.id) === null)) continue;
     let budget = kmPerTick(world, f);
     while (budget > 0 && order.path.length > 0) {
       const wp = order.path[0]!;

@@ -3,18 +3,20 @@
 import { parseArgs } from 'node:util';
 import { missedBands, runCampaign } from '../packages/sim/test/campaign.ts';
 
-const { values } = parseArgs({ options: { seeds: { type: 'string' } } });
+const { values } = parseArgs({ options: { seeds: { type: 'string' }, detailed: { type: 'boolean' } } });
 const n = Number(values.seeds ?? 20);
+// --detailed fights every battle at battalion level (the M5 check).
+const detailed = values.detailed ?? false;
 const f = (v: number | null, d = 1) => (v === null ? '  -  ' : v.toFixed(d).padStart(5));
 const pct = (v: number) => `${(v * 100).toFixed(1)}%`.padStart(6);
 let passed = 0;
-console.log('seed  G-day  G-days  KC holder  Iraq left  surr  coal loss  RG left  reg left  cease  ms/tick');
+console.log(`seed  G-day  G-days  KC holder  Iraq left  surr  coal loss  RG left  reg left  cease  ms/tick${detailed ? '  battles  peak bns' : ''}`);
 for (let seed = 1; seed <= n; seed++) {
-  const m = runCampaign(seed);
+  const m = runCampaign(seed, undefined, { detailedBattles: detailed });
   const missed = missedBands(m);
   if (missed.length === 0) passed++;
   console.log(
-    `${String(seed).padStart(4)}  ${f(m.groundWarDay)}  ${f(m.groundWarDays)}   ${(m.kuwaitCityHolder ?? '-').padEnd(9)}  ${pct(m.iraqPowerLeft)}  ${pct(m.iraqSurrenderShare)}  ${pct(m.coalitionLossShare)}  ${pct(m.rgLeft)}   ${pct(m.regularLeft)}  ${f(m.ceasefireDay)}  ${m.msPerTick.toFixed(2)}` +
+    `${String(seed).padStart(4)}  ${f(m.groundWarDay)}  ${f(m.groundWarDays)}   ${(m.kuwaitCityHolder ?? '-').padEnd(9)}  ${pct(m.iraqPowerLeft)}  ${pct(m.iraqSurrenderShare)}  ${pct(m.coalitionLossShare)}  ${pct(m.rgLeft)}   ${pct(m.regularLeft)}  ${f(m.ceasefireDay)}  ${m.msPerTick.toFixed(2).padStart(7)}${detailed ? `  ${String(m.battlesOpened).padStart(7)}  ${String(m.peakDetailedUnits).padStart(8)}` : ''}` +
       (missed.length ? `   MISS: ${missed.join('; ')}` : ''),
   );
 }

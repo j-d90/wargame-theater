@@ -57,6 +57,16 @@ export interface Rules {
   /** Ground fire bonus (permille) per close-support sortie, and its cap. */
   supportPerSortie: number;
   supportCap: number;
+
+  // Detailed (tactical) battles.
+  /** Fire multiplier for the detailed resolver, calibrated so it matches aggregate combat (npm run tactical-check). */
+  tacticalFire: number;
+  /** Reach of units that have no battalion type, km. */
+  tacticalDefaultRangeKm: number;
+  /** How far a broken battalion falls back, km. */
+  tacticalFallBackKm: number;
+  /** A battle closes after this many ticks without opposing units in contact range. */
+  battleIdleTicks: number;
 }
 
 export const DEFAULT_RULES: Readonly<Rules> = {
@@ -90,4 +100,9 @@ export const DEFAULT_RULES: Readonly<Rules> = {
   linkRepairPerDay: 80,
   supportPerSortie: 0.4,
   supportCap: 1600,
+
+  tacticalFire: 1,
+  tacticalDefaultRangeKm: 5,
+  tacticalFallBackKm: 40,
+  battleIdleTicks: 8,
 };

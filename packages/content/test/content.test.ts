@@ -79,6 +79,47 @@ describe('content', () => {
   });
 });
 
+describe('tactical catalog', () => {
+  const t = defaultCatalog.tactical;
+  const raw = () => ({
+    types: [...t.types.values()].map((x) => ({ ...x })),
+    compositions: [...t.compositions.values()].map((c) => structuredClone(c)),
+  });
+
+  it('gives every Desert Storm template a composition, with sources', () => {
+    for (const u of defaultCatalog.units.values()) {
+      if (!u.id.startsWith('ds-')) continue;
+      expect(u.composition, u.id).toBeDefined();
+      const c = t.compositions.get(u.composition!)!;
+      expect(c.source.length).toBeGreaterThan(10);
+    }
+  });
+
+  it('keeps group labels unique within a composition', () => {
+    for (const c of t.compositions.values()) {
+      const shorts = c.groups.map((g) => g.short.toLowerCase());
+      expect(new Set(shorts).size, c.id).toBe(shorts.length);
+    }
+  });
+
+  it('rejects a composition naming an unknown battalion type', () => {
+    const bad = raw();
+    bad.compositions[0]!.groups[0]!.parts[0]!.type = 'ghost-battalion';
+    expect(() => buildCatalog({ units: [], nations: [], tactical: bad })).toThrow(/unknown tactical type "ghost-battalion"/);
+  });
+
+  it('rejects a template naming an unknown composition', () => {
+    const u = { ...defaultCatalog.units.get('test-division')!, composition: 'ghost' };
+    expect(() => buildCatalog({ units: [u], nations: [] })).toThrow(/unknown composition "ghost"/);
+  });
+
+  it('rejects out-of-range battalion stats', () => {
+    const bad = raw();
+    bad.types[0]!.rangeKm = 0;
+    expect(() => buildCatalog({ units: [], nations: [], tactical: bad })).toThrow();
+  });
+});
+
 describe('maps', () => {
   const gulf = defaultCatalog.maps.get('gulf')!;
   const sandboxRaw = () => structuredClone(scenarioFiles['gulf-sandbox']) as Record<string, any>;

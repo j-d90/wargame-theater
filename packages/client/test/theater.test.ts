@@ -3,6 +3,9 @@ import { loadScenario } from '@tow/content';
 import { createWorld, summarize } from '@tow/sim';
 import { MAX_SCALE, boundsOf, fit, pan, toScreen, toWorld, zoomAt } from '../src/views/theater/camera.ts';
 import { distanceToSegment, hitTest } from '../src/views/theater/hit.ts';
+import { unitAt, unitsInBox } from '../src/views/tactical/hit.ts';
+import { duration } from '../src/ui/format.ts';
+import type { TacticalSummary } from '@tow/sim';
 
 describe('camera', () => {
   const cam = { scale: 2, x: 100, y: 50 };
@@ -63,5 +66,33 @@ describe('hit testing', () => {
   it('measures distance to a segment, including past its ends', () => {
     expect(distanceToSegment({ x: 5, y: 3 }, { x: 0, y: 0 }, { x: 10, y: 0 })).toBe(3);
     expect(distanceToSegment({ x: 13, y: 4 }, { x: 0, y: 0 }, { x: 10, y: 0 })).toBe(5);
+  });
+});
+
+describe('tactical hit testing', () => {
+  const t = {
+    battle: { id: 'battle-1', name: 'Battle', center: { x: 0, y: 0 }, radiusKm: 20, openedTick: 0, roots: ['b1'], sides: [] },
+    fire: [],
+    units: [
+      { id: 'b1/1/tk-1', side: 'blue', position: { x: 0, y: 0 } },
+      { id: 'b1/1/tk-2', side: 'blue', position: { x: 2, y: 0 } },
+      { id: 'r1/1/tk-1', side: 'red', position: { x: 5, y: 1 } },
+    ],
+  } as unknown as TacticalSummary;
+
+  it('finds the battalion under the pointer at the current zoom', () => {
+    expect(unitAt(t, { x: 0.3, y: 0.1 }, 20)).toBe('b1/1/tk-1');
+    expect(unitAt(t, { x: 1, y: 3 }, 20)).toBeNull();
+  });
+
+  it('box-selects only the given side', () => {
+    expect(unitsInBox(t, { x: -1, y: -1 }, { x: 6, y: 2 }, 'blue')).toEqual(['b1/1/tk-1', 'b1/1/tk-2']);
+    expect(unitsInBox(t, { x: 6, y: 2 }, { x: -1, y: -1 }, null)).toHaveLength(3);
+  });
+
+  it('formats spans of game time', () => {
+    expect(duration(2)).toBe('30 min');
+    expect(duration(27)).toBe('6 h 45 min');
+    expect(duration(96 * 2 + 24)).toBe('2 d 6 h');
   });
 });

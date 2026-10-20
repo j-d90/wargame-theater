@@ -2,7 +2,9 @@ import type { Position } from '@tow/content';
 import { hashState } from './hash.ts';
 import { dayOf } from './time.ts';
 import { sortedIds, type FormationStats, type WorldState } from './world.ts';
-import { activeFormations, effectiveSupplyNode, rollup } from '../command/formations.ts';
+import { alive, effectiveSupplyNode, frontier, rollup, theaterUnits } from '../command/formations.ts';
+import { rangeOf } from '../combat/battle.ts';
+import type { Formation } from './world.ts';
 import { combatPower, mobility, supplyLevel } from '../command/derived.ts';
 import { kmPerTick } from '../command/movement.ts';
 import { inSupplyRange, supplyDistance } from '../supply/flow.ts';
@@ -47,6 +49,34 @@ export interface FormationSummary {
   supplyNode: string | null;
   supplyDistanceKm: number | null;
   inSupplyRange: boolean;
+  /** Set on a formation fighting a detailed battle (its battalions are in the tactical summary). */
+  battle: string | null;
+  /** Battalion type, for units generated from a composition. */
+  tacticalType: string | null;
+  /** Reach of its fire in a detailed battle, km. */
+  rangeKm: number;
+  /** Under the player's direct tactical command. */
+  manual: boolean;
+  /** Whether it can be broken down into battalions. */
+  composition: string | null;
+}
+
+export interface BattleSummary {
+  id: string;
+  name: string;
+  center: Position;
+  radiusKm: number;
+  openedTick: number;
+  roots: string[];
+  sides: { side: string; start: number; strength: number; units: number }[];
+}
+
+/** Battalion-level detail of one open battle, sent only while it is being watched. */
+export interface TacticalSummary {
+  battle: BattleSummary;
+  units: FormationSummary[];
+  /** Shooter and main target ids from the last tick. */
+  fire: [string, string][];
 }
 
 export interface SideSummary {
@@ -120,6 +150,8 @@ export interface WorldSummary {
   supplyRangeKm: number;
   sides: SideSummary[];
   objectives: ObjectiveSummary[];
+  battles: BattleSummary[];
+  tactical: TacticalSummary | null;
   /** Midpoints of formations in contact, for drawing engagements. */
   engagements: { a: string; b: string; position: Position }[];
   active: FormationSummary[];
@@ -152,12 +184,101 @@ export interface WorldSummary {
 
 const round = (v: number | null) => (v === null ? null : Math.round(v));
 
-export function summarize(world: WorldState): WorldSummary {
+function formationSummary(world: WorldState, f: Formation): FormationSummary {
+  // A formation fighting a detailed battle is expanded: its figures come from its battalions.
+  const unit = f.battle !== null && !f.aggregated && f.childIds.length > 0 ? { ...f, stats: rollup(world, f.id) } : f;
+  const dist = supplyDistance(world, unit);
+  const st = unit.stats;
+  return {
+    id: f.id,
+    name: f.name,
+    nation: f.nation,
+    echelon: f.echelon,
+    branch: f.branch,
+    side: f.side,
+    status: f.status,
+    orderKind: f.order?.kind ?? null,
+    inContact: f.inContact,
+    fortification: Math.round(f.fortification),
+    quality: st.quality,
+    establishment: st.establishment,
+    fightingValue: Math.round(fightingValue(unit)),
+    parentId: f.parentId,
+    parentName: f.parentId === null ? null : world.formations[f.parentId]!.name,
+    parentEchelon: f.parentId === null ? null : world.formations[f.parentId]!.echelon,
+    hasChildren: f.childIds.length > 0,
+    aggregated: f.aggregated,
+    position: { ...f.position },
+    path: f.order ? f.order.path.map((p) => ({ ...p })) : [],
+    strength: st.strength,
+    readiness: st.readiness,
+    morale: Math.round(st.morale),
+    stock: st.stock,
+    stockCap: st.stockCap,
+    supplyPerTick: st.supplyPerTick,
+    supplyLevel: supplyLevel(st),
+    mobility: mobility(st, world.rules),
+    combatPower: combatPower(st),
+    kmPerDay: Math.round(kmPerTick(world, unit) * TICKS_PER_DAY),
+    supplyNode: effectiveSupplyNode(world, f.id),
+    supplyDistanceKm: dist === null ? null : Math.round(dist),
+    inSupplyRange: inSupplyRange(world, unit),
+    battle: f.battle,
+    tacticalType: f.tacticalType,
+    rangeKm: rangeOf(world, f),
+    manual: f.manual,
+    composition: f.composition,
+  };
+}
+
+function battleSummary(world: WorldState, id: string): BattleSummary {
+  const b = world.battles[id]!;
+  const sides = new Map<string, { strength: number; units: number }>();
+  for (const side of Object.keys(b.startStrength)) sides.set(side, { strength: 0, units: 0 });
+  for (const rid of b.roots) {
+    const root = world.formations[rid];
+    if (!root) continue;
+    for (const f of frontier(world, rid)) {
+      if (!alive(f)) continue;
+      const e = sides.get(f.side) ?? { strength: 0, units: 0 };
+      e.strength += f.stats.strength;
+      e.units++;
+      sides.set(f.side, e);
+    }
+  }
+  return {
+    id,
+    name: b.name,
+    center: { ...b.center },
+    radiusKm: Math.round(b.radiusKm),
+    openedTick: b.openedTick,
+    roots: [...b.roots],
+    sides: [...sides.keys()].sort().map((side) => ({ side, start: b.startStrength[side] ?? 0, ...sides.get(side)! })),
+  };
+}
+
+function tacticalSummary(world: WorldState, id: string): TacticalSummary | null {
+  const b = world.battles[id];
+  if (!b) return null;
+  const units = b.roots
+    .flatMap((rid) => (world.formations[rid] ? frontier(world, rid) : []))
+    .filter(alive)
+    .sort((x, y) => (x.id < y.id ? -1 : 1));
+  return { battle: battleSummary(world, id), units: units.map((f) => formationSummary(world, f)), fire: b.fire.map(([a, t]) => [a, t]) };
+}
+
+export interface SummaryOptions {
+  /** Include battalion-level detail for this battle. */
+  battle?: string | null;
+}
+
+export function summarize(world: WorldState, options: SummaryOptions = {}): WorldSummary {
   const totals: Record<string, FormationStats> = {};
   for (const id of sortedIds(world.formations)) {
     if (world.formations[id]!.parentId === null) totals[id] = rollup(world, id);
   }
-  const active = activeFormations(world);
+  const active = theaterUnits(world);
+  const summaries = active.map((f) => formationSummary(world, f));
   const st = world.strategy;
   return {
     strategy: st
@@ -211,13 +332,13 @@ export function summarize(world: WorldState): WorldSummary {
     supplyRangeKm: world.rules.supplyRangeKm,
     sides: sortedIds(world.sides).map((id) => {
       const s = world.sides[id]!;
-      const mine = active.filter((f) => f.side === id);
+      const mine = summaries.filter((f) => f.side === id);
       return {
         id,
         name: s.name,
         color: s.color,
         combatPowerRatio: s.initialCombatPower > 0 ? Math.round((sideCombatPower(world, id) * 1000) / s.initialCombatPower) : 0,
-        strength: mine.reduce((sum, f) => sum + f.stats.strength, 0),
+        strength: mine.reduce((sum, f) => sum + f.strength, 0),
         initialStrength: s.initialStrength,
         losses: s.losses,
         surrendered: s.surrendered,
@@ -233,50 +354,15 @@ export function summarize(world: WorldState): WorldSummary {
       const o = world.objectives[id]!;
       return { id, name: o.name, position: { ...o.position }, holder: o.holder, radiusKm: o.radiusKm, points: o.points, capturedTick: o.capturedTick };
     }),
+    battles: sortedIds(world.battles).map((id) => battleSummary(world, id)),
+    tactical: options.battle ? tacticalSummary(world, options.battle) : null,
     engagements: world.contacts.flatMap(([a, b]) => {
       const fa = world.formations[a];
       const fb = world.formations[b];
       if (!fa || !fb) return [];
       return [{ a, b, position: { x: (fa.position.x + fb.position.x) / 2, y: (fa.position.y + fb.position.y) / 2 } }];
     }),
-    active: active.map((f) => {
-      const dist = supplyDistance(world, f);
-      return {
-        id: f.id,
-        name: f.name,
-        nation: f.nation,
-        echelon: f.echelon,
-        branch: f.branch,
-        side: f.side,
-        status: f.status,
-        orderKind: f.order?.kind ?? null,
-        inContact: f.inContact,
-        fortification: Math.round(f.fortification),
-        quality: f.stats.quality,
-        establishment: f.stats.establishment,
-        fightingValue: Math.round(fightingValue(f)),
-        parentId: f.parentId,
-        parentName: f.parentId === null ? null : world.formations[f.parentId]!.name,
-        parentEchelon: f.parentId === null ? null : world.formations[f.parentId]!.echelon,
-        hasChildren: f.childIds.length > 0,
-        aggregated: f.aggregated,
-        position: { ...f.position },
-        path: f.order ? f.order.path.map((p) => ({ ...p })) : [],
-        strength: f.stats.strength,
-        readiness: f.stats.readiness,
-        morale: Math.round(f.stats.morale),
-        stock: f.stats.stock,
-        stockCap: f.stats.stockCap,
-        supplyPerTick: f.stats.supplyPerTick,
-        supplyLevel: supplyLevel(f.stats),
-        mobility: mobility(f.stats, world.rules),
-        combatPower: combatPower(f.stats),
-        kmPerDay: Math.round(kmPerTick(world, f) * TICKS_PER_DAY),
-        supplyNode: effectiveSupplyNode(world, f.id),
-        supplyDistanceKm: dist === null ? null : Math.round(dist),
-        inSupplyRange: inSupplyRange(world, f),
-      };
-    }),
+    active: summaries,
     totals,
     nodes: sortedIds(world.supply.nodes).map((id) => {
       const n = world.supply.nodes[id]!;

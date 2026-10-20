@@ -1,4 +1,4 @@
-import { defaultCatalog, scenarioFiles, type Catalog } from './catalog.ts';
+import { defaultCatalog, scenarioFiles, type Catalog, type TacticalCatalog } from './catalog.ts';
 import { latLonToXY } from './projection.ts';
 import {
   ScenarioSchema,
@@ -56,6 +56,7 @@ export interface ResolvedScenario {
   units: ReadonlyMap<string, UnitTemplate>;
   nations: ReadonlyMap<string, Nation>;
   map: GameMap | null;
+  tactical: TacticalCatalog;
 }
 
 export type ValidationResult =
@@ -338,6 +339,7 @@ export function validateScenario(raw: unknown, catalog: Catalog = defaultCatalog
       units: catalog.units,
       nations: catalog.nations,
       map,
+      tactical: catalog.tactical,
     },
   };
 }

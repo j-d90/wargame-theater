@@ -16,11 +16,13 @@ let carry = 0;
 let last = performance.now();
 let dirty = false;
 let lastCeasefire: number | null = null;
+/** The battle whose battalions go into snapshots. */
+let watching: string | null = null;
 
 const post = (msg: FromWorker) => scope.postMessage(msg);
 
 function publish() {
-  if (host) post({ type: 'snapshot', summary: host.snapshot(), speed });
+  if (host) post({ type: 'snapshot', summary: host.snapshot(watching), speed });
   dirty = false;
 }
 
@@ -44,6 +46,22 @@ scope.onmessage = (e) => {
         speed = msg.speed;
         carry = 0;
         dirty = true;
+        return;
+      case 'openBattle': {
+        if (!host) return;
+        try {
+          watching = host.openBattle(msg.formation);
+          post({ type: 'battleOpened', battle: watching });
+        } catch (err) {
+          post({ type: 'rejected', command: { type: 'openBattle', formation: msg.formation }, reason: (err instanceof Error ? err.message : String(err)).replace(/^\w+: /, '') });
+        }
+        // Answer at once rather than on the next frame: this is a level switch.
+        publish();
+        return;
+      }
+      case 'watch':
+        watching = msg.battle;
+        publish();
         return;
     }
   } catch (err) {

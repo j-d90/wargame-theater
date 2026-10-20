@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { TheaterView } from '../views/theater/TheaterView.ts';
 import { mapAssets } from '../views/theater/maps.ts';
-import { sim } from '../state/sim.ts';
+import { openBattle, sim, watchBattle } from '../state/sim.ts';
 import { select, store, useApp } from '../state/store.ts';
 
 export function MapCanvas() {
@@ -20,6 +20,19 @@ export function MapCanvas() {
           return;
         }
         select(hit);
+      },
+      onDoubleClick(point, hit, scale) {
+        // Zoom in: on a unit in a fight, an engagement, or a battle already fought in detail.
+        const sum = store.get().summary;
+        if (!sum) return;
+        const f = hit?.kind === 'formation' ? sum.active.find((a) => a.id === hit.id) : undefined;
+        if (f?.battle) return watchBattle(f.battle);
+        if (f?.inContact) return openBattle(f.id);
+        const near = (p: { x: number; y: number }) => Math.hypot(p.x - point.x, p.y - point.y) * scale;
+        const e = sum.engagements.find((x) => near(x.position) <= 14);
+        if (e) return openBattle(e.a);
+        const b = sum.battles.find((x) => near(x.center) <= Math.max(x.radiusKm * scale, 14));
+        if (b) watchBattle(b.id);
       },
     });
     const sync = () => {

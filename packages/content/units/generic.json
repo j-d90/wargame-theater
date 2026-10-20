@@ -8,6 +8,7 @@
     "supplyPerTick": 16,
     "stockDays": 3,
     "speedKmPerDay": 70,
+    "composition": "generic-armored-division",
     "source": "Abstract game values, not historical."
   },
   {
@@ -19,6 +20,7 @@
     "supplyPerTick": 14,
     "stockDays": 3,
     "speedKmPerDay": 60,
+    "composition": "generic-mech-division",
     "source": "Abstract game values, not historical."
   },
   {
@@ -30,6 +32,7 @@
     "supplyPerTick": 9,
     "stockDays": 4,
     "speedKmPerDay": 30,
+    "composition": "generic-infantry-division",
     "source": "Abstract game values, not historical."
   },
   {
@@ -41,6 +44,7 @@
     "supplyPerTick": 5,
     "stockDays": 3,
     "speedKmPerDay": 70,
+    "composition": "generic-armored-brigade",
     "source": "Abstract game values, not historical."
   }
 ]

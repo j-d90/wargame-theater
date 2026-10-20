@@ -1,7 +1,7 @@
 // Owns the world inside the worker: applies commands safely, advances time,
 // and records every accepted command with its tick (the basis for replays).
 import { loadScenario } from '@tow/content';
-import { applyCommand, createWorld, step, summarize, type Command, type TimedCommand, type WorldState, type WorldSummary } from '@tow/sim';
+import { applyCommand, battleRootOf, createWorld, step, summarize, type Command, type TimedCommand, type WorldState, type WorldSummary } from '@tow/sim';
 import type { ScenarioInfo } from './protocol.ts';
 
 export class SimHost {
@@ -42,7 +42,17 @@ export class SimHost {
     return this.world.tick >= this.info.days * 96;
   }
 
-  snapshot(): WorldSummary {
-    return summarize(this.world);
+  /** Open (or find) the detailed battle a formation is fighting. Returns its id, or throws why not. */
+  openBattle(formation: string): string {
+    const reason = this.command({ type: 'openBattle', formation });
+    if (reason) throw new Error(reason);
+    const root = battleRootOf(this.world, formation);
+    if (!root?.battle) throw new Error('openBattle: the battle closed at once');
+    return root.battle;
+  }
+
+  /** The summary the views draw, with battalion detail for `battle` if given. */
+  snapshot(battle: string | null = null): WorldSummary {
+    return summarize(this.world, { battle });
   }
 }

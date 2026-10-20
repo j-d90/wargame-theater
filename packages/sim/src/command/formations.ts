@@ -44,11 +44,34 @@ export function isActive(world: WorldState, id: string): boolean {
   return (f.aggregated || f.childIds.length === 0) && alive(f) && !hasAggregatedAncestor(world, id);
 }
 
+const idCache = new WeakMap<object, string[]>();
+
+/**
+ * Formation ids in sorted order, cached per formations record. Formations are
+ * created only by createWorld and breakDown (detailed units are generated,
+ * never removed); breakDown calls forgetFormationIds.
+ */
+export function formationIds(world: WorldState): string[] {
+  let ids = idCache.get(world.formations);
+  if (!ids) {
+    ids = sortedIds(world.formations);
+    idCache.set(world.formations, ids);
+  }
+  return ids;
+}
+
+export function forgetFormationIds(world: WorldState): void {
+  idCache.delete(world.formations);
+}
+
 /** All active (simulated and alive) formations, sorted by id. */
 export function activeFormations(world: WorldState): Formation[] {
-  return sortedIds(world.formations)
-    .filter((id) => isActive(world, id))
-    .map((id) => world.formations[id]!);
+  const out: Formation[] = [];
+  for (const id of formationIds(world)) {
+    const f = world.formations[id]!;
+    if ((f.aggregated || f.childIds.length === 0) && alive(f) && !hasAggregatedAncestor(world, id)) out.push(f);
+  }
+  return out;
 }
 
 /**
@@ -61,8 +84,52 @@ export function frontier(world: WorldState, id: string): Formation[] {
   return childFrontier(world, f);
 }
 
+function collectFrontier(world: WorldState, f: Formation, out: Formation[]): void {
+  for (const c of f.childIds) {
+    const child = get(world, c);
+    if (child.aggregated || child.childIds.length === 0) out.push(child);
+    else collectFrontier(world, child, out);
+  }
+}
+
 function childFrontier(world: WorldState, f: Formation): Formation[] {
-  return f.childIds.flatMap((c) => frontier(world, c)).sort((a, b) => (a.id < b.id ? -1 : 1));
+  const out: Formation[] = [];
+  collectFrontier(world, f, out);
+  // Usually already in order (generated ids share their parent's prefix); sort only if not.
+  for (let i = 1; i < out.length; i++) {
+    if (out[i - 1]!.id > out[i]!.id) return out.sort((a, b) => (a.id < b.id ? -1 : 1));
+  }
+  return out;
+}
+
+/** Root of the open battle a formation is fought in, if it is inside one. */
+export function battleRootOf(world: WorldState, id: string): Formation | null {
+  for (let f: Formation | undefined = get(world, id); f; f = f.parentId === null ? undefined : world.formations[f.parentId]) {
+    if (f.battle !== null) return f;
+  }
+  return null;
+}
+
+/**
+ * The formations that take theater-level orders for `id`'s subtree: like
+ * frontier(), but a formation fighting a detailed battle answers as one unit,
+ * passing its orders down to tactical AI as intent.
+ */
+export function commandFrontier(world: WorldState, id: string): Formation[] {
+  const f = get(world, id);
+  if (f.battle !== null || f.aggregated || f.childIds.length === 0) return [f];
+  return f.childIds.flatMap((c) => commandFrontier(world, c)).sort((a, b) => (a.id < b.id ? -1 : 1));
+}
+
+/** Theater-level units: active formations, with each battle's battalions replaced by their root. Sorted by id. */
+export function theaterUnits(world: WorldState): Formation[] {
+  const out = new Map<string, Formation>();
+  for (const f of activeFormations(world)) {
+    const root = battleRootOf(world, f.id);
+    const unit = root ?? f;
+    if (!out.has(unit.id)) out.set(unit.id, unit);
+  }
+  return [...out.values()].sort((a, b) => (a.id < b.id ? -1 : 1));
 }
 
 /** Supply node a formation draws from: its own, else the nearest ancestor's. */

@@ -1,5 +1,5 @@
 import type { SpeedSetting } from '../worker/protocol.ts';
-import { sim } from '../state/sim.ts';
+import { leaveBattle, sim, watchBattle } from '../state/sim.ts';
 import { store, useApp } from '../state/store.ts';
 import { calendarDate, clock } from './format.ts';
 
@@ -21,6 +21,18 @@ export function TopBar() {
   const hasStrategy = useApp((s) => s.summary?.strategy != null);
   const view = useApp((s) => s.view);
   const ceasefire = useApp((s) => s.summary?.strategy?.ceasefire.tick != null);
+  const battle = useApp((s) => s.battle);
+  const firstBattle = useApp((s) => s.summary?.battles[0]?.id ?? null);
+  const levels = [...(hasStrategy ? (['strategic'] as const) : []), 'theater' as const, ...(battle || firstBattle ? (['tactical'] as const) : [])];
+  const LABELS = { strategic: 'Strategic', theater: 'Theater', tactical: 'Tactical' };
+  const go = (v: (typeof levels)[number]) => {
+    if (v === view) return;
+    if (v === 'tactical') watchBattle(battle ?? firstBattle!);
+    else if (view === 'tactical') {
+      leaveBattle();
+      store.set({ view: v });
+    } else store.set({ view: v });
+  };
 
   return (
     <header className="topbar">
@@ -28,11 +40,11 @@ export function TopBar() {
         <strong>Theater of War</strong>
         <span className="scenario">{name}</span>
       </div>
-      {hasStrategy && (
+      {levels.length > 1 && (
         <div className="levels" role="tablist" aria-label="Command level">
-          {(['strategic', 'theater'] as const).map((v) => (
-            <button key={v} role="tab" aria-selected={view === v} className={view === v ? 'active' : ''} onClick={() => store.set({ view: v })}>
-              {v === 'strategic' ? 'Strategic' : 'Theater'}
+          {levels.map((v) => (
+            <button key={v} role="tab" aria-selected={view === v} className={view === v ? 'active' : ''} onClick={() => go(v)}>
+              {LABELS[v]}
             </button>
           ))}
         </div>

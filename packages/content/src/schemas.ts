@@ -85,6 +85,52 @@ export const GameMapSchema = z
   });
 export type GameMap = z.infer<typeof GameMapSchema>;
 
+export const BranchSchema = z.enum(['armor', 'mechanized', 'infantry', 'artillery', 'recon', 'support']);
+export type Branch = z.infer<typeof BranchSchema>;
+
+/** A battalion type for detailed (tactical) battles. Abstract game stats only. */
+export const TacticalTypeSchema = z.object({
+  id,
+  name: z.string().min(1),
+  /** Short label for map counters. */
+  abbr: z.string().min(1).max(6),
+  branch: BranchSchema,
+  /** Share of the parent formation's strength, relative to the other battalions. */
+  weight: z.number().int().positive(),
+  /** How far its fire reaches in a detailed battle, km. */
+  rangeKm: z.number().positive().max(40),
+  /** Fights from the second line, behind the direct-fire battalions. */
+  rear: z.boolean().default(false),
+});
+export type TacticalType = z.infer<typeof TacticalTypeSchema>;
+
+/**
+ * How a formation breaks down into battalions: groups (brigades, regiments,
+ * task forces) of battalions. A group without a name puts its battalions
+ * directly under the formation.
+ */
+export const CompositionSchema = z.object({
+  id,
+  name: z.string().min(1),
+  source: z.string().min(1),
+  groups: z
+    .array(
+      z.object({
+        name: z.string().min(1).optional(),
+        /** Prefix for battalion labels, e.g. "1" gives "1-2 Tk". */
+        short: z.string().min(1).max(4),
+        parts: z.array(z.object({ type: id, count: z.number().int().positive().max(12) })).min(1),
+      }),
+    )
+    .min(1),
+});
+export type Composition = z.infer<typeof CompositionSchema>;
+
+export const TacticalCatalogSchema = z.object({
+  types: z.array(TacticalTypeSchema).min(1),
+  compositions: z.array(CompositionSchema),
+});
+
 export const UnitTemplateSchema = z.object({
   id,
   name: z.string().min(1),
@@ -96,11 +142,13 @@ export const UnitTemplateSchema = z.object({
   /** Days of supply the formation carries with it. */
   stockDays: z.number().int().positive(),
   /** Unit type, used for map symbols. */
-  branch: z.enum(['armor', 'mechanized', 'infantry', 'artillery', 'support']).optional(),
+  branch: BranchSchema.optional(),
   /** Road-march speed in open terrain at full readiness, km per day. */
   speedKmPerDay: z.number().int().positive().default(40),
   /** Abstract fighting quality (training, equipment, doctrine), permille of a baseline unit. */
   quality: z.number().int().positive().default(1000),
+  /** How the formation breaks down into battalions when a battle is fought in detail (id in the tactical catalog). */
+  composition: id.optional(),
   source: z.string().optional(),
 });
 export type UnitTemplate = z.infer<typeof UnitTemplateSchema>;

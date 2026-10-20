@@ -18,6 +18,9 @@ worker.onmessage = (e: MessageEvent<FromWorker>) => {
     case 'ready':
       store.set({ scenario: msg.scenario });
       return;
+    case 'battleOpened':
+      store.set({ battle: msg.battle, view: 'tactical', tacticalSelection: [], tacticalMode: 'select' });
+      return;
     case 'snapshot': {
       const { selection, playerSide } = store.get();
       if (playerSide === null && msg.summary.sides.length > 1) {
@@ -30,6 +33,13 @@ worker.onmessage = (e: MessageEvent<FromWorker>) => {
       // Drop a selection whose formation was just expanded or collapsed away.
       const gone = selection?.kind === 'formation' && !msg.summary.active.some((f) => f.id === selection.id);
       store.set({ summary: msg.summary, speed: msg.speed, ...(gone ? { selection: null, mode: 'select' as const } : {}) });
+      // The watched battle has ended: collapse back to the theater.
+      const watched = store.get().battle;
+      if (watched !== null && !msg.summary.battles.some((b) => b.id === watched)) {
+        notify('The battle is over; its divisions are back under theater command.');
+        store.set((s) => ({ battle: null, tacticalSelection: [], view: s.view === 'tactical' ? 'theater' : s.view }));
+        post({ type: 'watch', battle: null });
+      }
       const log = msg.summary.strategy?.log ?? [];
       const latest = log[0] ? log[0].tick * 1000 + log.length : 0;
       if (seenLog !== 0 && latest !== seenLog) {
@@ -39,6 +49,7 @@ worker.onmessage = (e: MessageEvent<FromWorker>) => {
       return;
     }
     case 'rejected':
+      if (msg.command.type === 'openBattle') store.set({ switchStart: null });
       notify(msg.reason, 'error');
       return;
     case 'error':
@@ -53,3 +64,27 @@ export const sim = {
   send: (command: Command) => post({ type: 'command', command }),
   setSpeed: (speed: SpeedSetting) => post({ type: 'speed', speed }),
 };
+
+/** Zoom in: fight the battle `formation` is in at battalion level and switch to it. */
+export function openBattle(formation: string) {
+  store.set({ switchStart: performance.now() });
+  post({ type: 'openBattle', formation });
+}
+
+/** Zoom in on a battle that is already being fought in detail. */
+export function watchBattle(battle: string) {
+  store.set({ switchStart: performance.now(), battle, view: 'tactical', tacticalSelection: [], tacticalMode: 'select' });
+  post({ type: 'watch', battle });
+}
+
+/** Zoom out to the theater. The battle carries on in detail until it ends or is closed. */
+export function leaveBattle() {
+  store.set({ switchStart: performance.now(), view: 'theater', tacticalMode: 'select' });
+}
+
+/** End detailed fighting: the battle's battalions collapse back into their divisions. */
+export function closeBattle(battle: string) {
+  store.set({ switchStart: performance.now(), view: 'theater', battle: null, tacticalSelection: [] });
+  post({ type: 'command', command: { type: 'closeBattle', battle } });
+  post({ type: 'watch', battle: null });
+}

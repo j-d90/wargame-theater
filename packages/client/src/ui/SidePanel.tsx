@@ -1,5 +1,5 @@
 import type { FormationSummary, WorldSummary } from '@tow/sim';
-import { sim } from '../state/sim.ts';
+import { openBattle, sim, watchBattle } from '../state/sim.ts';
 import { focusOn, select, store, useApp } from '../state/store.ts';
 import { statusColor } from '../views/theater/style.ts';
 import { calendarDate, capitalize, daysOfSupply, pct } from './format.ts';
@@ -14,9 +14,9 @@ const AIR_LABELS: Record<AirKey, string> = {
   strategic: 'Strategic',
 };
 
-const css = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
+export const css = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
 
-function Bar({ label, permille, detail }: { label: string; permille: number; detail?: string }) {
+export function Bar({ label, permille, detail }: { label: string; permille: number; detail?: string }) {
   return (
     <div className="bar">
       <div className="bar-label">
@@ -30,7 +30,7 @@ function Bar({ label, permille, detail }: { label: string; permille: number; det
   );
 }
 
-function Stat({ label, value }: { label: string; value: string | number }) {
+export function Stat({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="stat">
       <span>{label}</span>
@@ -41,7 +41,7 @@ function Stat({ label, value }: { label: string; value: string | number }) {
 
 const COLLAPSIBLE = new Set(['corps', 'division', 'brigade', 'battalion']);
 
-const STATUS: Record<FormationSummary['status'], string> = {
+export const STATUS: Record<FormationSummary['status'], string> = {
   active: 'Active',
   retreating: 'Falling back',
   surrendered: 'Surrendered',
@@ -89,7 +89,22 @@ function FormationPanel({ f, summary }: { f: FormationSummary; summary: WorldSum
           {f.fortification > 0 ? ` · dug in ${pct(f.fortification)}` : ''}
         </p>
       )}
-      <p className={`status ${f.path.length > 0 && f.kmPerDay === 0 ? 'warn' : ''}`}>{status}</p>
+      <p className={`status ${f.path.length > 0 && f.kmPerDay === 0 ? 'warn' : ''}`}>{f.battle ? (f.orderKind ? `Ordered to ${f.orderKind}` : 'Holding its ground') : status}</p>
+      {f.battle && (
+        <p className="status warn">
+          In a battle fought battalion by battalion ({summary.battles.find((b) => b.id === f.battle)?.name ?? 'battle'}) ·{' '}
+          <button className="link" onClick={() => watchBattle(f.battle!)} title="Zoom in (B)">
+            View battle
+          </button>
+        </p>
+      )}
+      {!f.battle && f.inContact && (
+        <div className="actions">
+          <button className="primary" onClick={() => openBattle(f.id)} title="Zoom in: fight this battle battalion by battalion (B)">
+            Fight battle in detail
+          </button>
+        </div>
+      )}
       {!f.inSupplyRange && (
         <p className="alert">
           Out of supply range: {f.supplyDistanceKm ?? '?'} km from {node?.name ?? 'its depot'} (max {summary.supplyRangeKm} km)
@@ -121,7 +136,7 @@ function FormationPanel({ f, summary }: { f: FormationSummary; summary: WorldSum
             Halt
           </button>
           {f.hasChildren && f.aggregated && <button onClick={() => sim.send({ type: 'expand', formation: f.id })}>Expand</button>}
-          {f.parentId && f.parentEchelon && COLLAPSIBLE.has(f.parentEchelon) && (
+          {!f.battle && f.parentId && f.parentEchelon && COLLAPSIBLE.has(f.parentEchelon) && (
             <button onClick={() => sim.send({ type: 'aggregate', formation: f.parentId! })}>Collapse into {f.parentName}</button>
           )}
         </div>
@@ -225,6 +240,21 @@ function Campaign({ summary }: { summary: WorldSummary }) {
           </div>
         </div>
       ))}
+      {summary.battles.length > 0 && (
+        <>
+          <h3>Battles fought in detail</h3>
+          <ul className="list">
+            {summary.battles.map((b) => (
+              <li key={b.id}>
+                <button className="link" onClick={() => watchBattle(b.id)}>
+                  {b.name}
+                </button>
+                <span>{b.sides.reduce((n, x) => n + x.units, 0)} battalions</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       <h3>Objectives</h3>
       <ul className="list">
         {summary.objectives.map((o) => {

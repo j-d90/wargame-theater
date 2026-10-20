@@ -6,6 +6,7 @@
     "strength": 1200,
     "supplyPerTick": 10,
     "stockDays": 3,
+    "composition": "test-division",
     "source": "Abstract test values, not historical."
   },
   {
@@ -15,6 +16,7 @@
     "strength": 400,
     "supplyPerTick": 3,
     "stockDays": 3,
+    "composition": "test-brigade",
     "source": "Abstract test values, not historical."
   }
 ]

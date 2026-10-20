@@ -10,6 +10,17 @@ export function clock(tick: number): { day: number; time: string } {
   };
 }
 
+/** A span of ticks as "2 d 6 h", "6 h 45 min" or "30 min". */
+export function duration(ticks: number): string {
+  const minutes = ticks * TICK_MINUTES;
+  const d = Math.floor(minutes / 1440);
+  const h = Math.floor((minutes % 1440) / 60);
+  const m = minutes % 60;
+  if (d > 0) return `${d} d ${h} h`;
+  if (h > 0) return m > 0 ? `${h} h ${m} min` : `${h} h`;
+  return `${m} min`;
+}
+
 /** Days the carried stock lasts at the current rate of use. */
 export function daysOfSupply(stock: number, supplyPerTick: number): string {
   if (supplyPerTick <= 0) return '–';

@@ -1,0 +1,971 @@
+{
+  "types": [
+    {
+      "id": "tank-battalion",
+      "name": "Tank battalion",
+      "abbr": "Tk",
+      "branch": "armor",
+      "weight": 1000,
+      "rangeKm": 6
+    },
+    {
+      "id": "mech-battalion",
+      "name": "Mechanized infantry battalion",
+      "abbr": "Mech",
+      "branch": "mechanized",
+      "weight": 1000,
+      "rangeKm": 5.5
+    },
+    {
+      "id": "infantry-battalion",
+      "name": "Infantry battalion",
+      "abbr": "Inf",
+      "branch": "infantry",
+      "weight": 900,
+      "rangeKm": 5
+    },
+    {
+      "id": "cavalry-squadron",
+      "name": "Armored cavalry squadron",
+      "abbr": "Cav",
+      "branch": "armor",
+      "weight": 1000,
+      "rangeKm": 6
+    },
+    {
+      "id": "recon-battalion",
+      "name": "Reconnaissance battalion",
+      "abbr": "Rec",
+      "branch": "recon",
+      "weight": 600,
+      "rangeKm": 7
+    },
+    {
+      "id": "artillery-battalion",
+      "name": "Artillery battalion",
+      "abbr": "Arty",
+      "branch": "artillery",
+      "weight": 700,
+      "rangeKm": 14,
+      "rear": true
+    }
+  ],
+  "compositions": [
+    {
+      "id": "us-armored-division",
+      "name": "U.S. armored division",
+      "source": "Scales, Certain Victory: The U.S. Army in the Gulf War (1993); U.S. Army FM 71-100, Division Operations (1990). Simplified: manoeuvre and artillery battalions only, typical task organisation.",
+      "groups": [
+        {
+          "short": "1",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 2
+            },
+            {
+              "type": "mech-battalion",
+              "count": 1
+            }
+          ],
+          "name": "1st Brigade"
+        },
+        {
+          "short": "2",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 2
+            },
+            {
+              "type": "mech-battalion",
+              "count": 1
+            }
+          ],
+          "name": "2nd Brigade"
+        },
+        {
+          "short": "3",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 2
+            },
+            {
+              "type": "mech-battalion",
+              "count": 2
+            }
+          ],
+          "name": "3rd Brigade"
+        },
+        {
+          "short": "A",
+          "parts": [
+            {
+              "type": "artillery-battalion",
+              "count": 3
+            }
+          ],
+          "name": "Division Artillery"
+        },
+        {
+          "short": "C",
+          "parts": [
+            {
+              "type": "recon-battalion",
+              "count": 1
+            }
+          ],
+          "name": "Cavalry Squadron"
+        }
+      ]
+    },
+    {
+      "id": "us-mech-division",
+      "name": "U.S. mechanized infantry division",
+      "source": "Scales, Certain Victory: The U.S. Army in the Gulf War (1993); U.S. Army FM 71-100, Division Operations (1990). Simplified: manoeuvre and artillery battalions only, typical task organisation.",
+      "groups": [
+        {
+          "short": "1",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 1
+            },
+            {
+              "type": "mech-battalion",
+              "count": 2
+            }
+          ],
+          "name": "1st Brigade"
+        },
+        {
+          "short": "2",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 2
+            },
+            {
+              "type": "mech-battalion",
+              "count": 1
+            }
+          ],
+          "name": "2nd Brigade"
+        },
+        {
+          "short": "3",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 2
+            },
+            {
+              "type": "mech-battalion",
+              "count": 2
+            }
+          ],
+          "name": "3rd Brigade"
+        },
+        {
+          "short": "A",
+          "parts": [
+            {
+              "type": "artillery-battalion",
+              "count": 3
+            }
+          ],
+          "name": "Division Artillery"
+        },
+        {
+          "short": "C",
+          "parts": [
+            {
+              "type": "recon-battalion",
+              "count": 1
+            }
+          ],
+          "name": "Cavalry Squadron"
+        }
+      ]
+    },
+    {
+      "id": "us-light-division",
+      "name": "U.S. airborne or air assault division",
+      "source": "Scales, Certain Victory: The U.S. Army in the Gulf War (1993); U.S. Army FM 71-100, Division Operations (1990). Simplified: manoeuvre and artillery battalions only, typical task organisation.",
+      "groups": [
+        {
+          "short": "1",
+          "parts": [
+            {
+              "type": "infantry-battalion",
+              "count": 3
+            }
+          ],
+          "name": "1st Brigade"
+        },
+        {
+          "short": "2",
+          "parts": [
+            {
+              "type": "infantry-battalion",
+              "count": 3
+            }
+          ],
+          "name": "2nd Brigade"
+        },
+        {
+          "short": "3",
+          "parts": [
+            {
+              "type": "infantry-battalion",
+              "count": 3
+            }
+          ],
+          "name": "3rd Brigade"
+        },
+        {
+          "short": "A",
+          "parts": [
+            {
+              "type": "artillery-battalion",
+              "count": 3
+            }
+          ],
+          "name": "Division Artillery"
+        },
+        {
+          "short": "C",
+          "parts": [
+            {
+              "type": "recon-battalion",
+              "count": 1
+            }
+          ],
+          "name": "Cavalry Squadron"
+        }
+      ]
+    },
+    {
+      "id": "us-cavalry-regiment",
+      "name": "U.S. armored cavalry regiment",
+      "source": "Scales, Certain Victory: The U.S. Army in the Gulf War (1993); U.S. Army FM 71-100, Division Operations (1990). Simplified: manoeuvre and artillery battalions only, typical task organisation.",
+      "groups": [
+        {
+          "short": "R",
+          "parts": [
+            {
+              "type": "cavalry-squadron",
+              "count": 3
+            },
+            {
+              "type": "artillery-battalion",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "usmc-division",
+      "name": "U.S. Marine division",
+      "source": "Mroczkowski, U.S. Marines in the Persian Gulf, 1990-1991: With the 2d Marine Division in Desert Shield and Desert Storm (1993); Cureton, With the 1st Marine Division in Desert Shield and Desert Storm (1993). Simplified: regimental task forces as groups.",
+      "groups": [
+        {
+          "short": "1",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 1
+            },
+            {
+              "type": "mech-battalion",
+              "count": 2
+            }
+          ],
+          "name": "1st Regimental Task Force"
+        },
+        {
+          "short": "2",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 1
+            },
+            {
+              "type": "infantry-battalion",
+              "count": 2
+            }
+          ],
+          "name": "2nd Regimental Task Force"
+        },
+        {
+          "short": "3",
+          "parts": [
+            {
+              "type": "infantry-battalion",
+              "count": 3
+            }
+          ],
+          "name": "3rd Regimental Task Force"
+        },
+        {
+          "short": "A",
+          "parts": [
+            {
+              "type": "artillery-battalion",
+              "count": 4
+            }
+          ],
+          "name": "Artillery Regiment"
+        },
+        {
+          "short": "L",
+          "parts": [
+            {
+              "type": "recon-battalion",
+              "count": 1
+            }
+          ],
+          "name": "Light Armored Infantry"
+        }
+      ]
+    },
+    {
+      "id": "uk-armoured-division",
+      "name": "British armoured division",
+      "source": "de la Billiere, Storm Command (1992); UK Ministry of Defence, Operation Granby records. Simplified: two armoured brigades plus divisional troops.",
+      "groups": [
+        {
+          "short": "7",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 2
+            },
+            {
+              "type": "mech-battalion",
+              "count": 1
+            }
+          ],
+          "name": "7th Armoured Brigade"
+        },
+        {
+          "short": "4",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 1
+            },
+            {
+              "type": "mech-battalion",
+              "count": 2
+            }
+          ],
+          "name": "4th Armoured Brigade"
+        },
+        {
+          "short": "A",
+          "parts": [
+            {
+              "type": "artillery-battalion",
+              "count": 3
+            }
+          ],
+          "name": "Divisional Artillery"
+        },
+        {
+          "short": "R",
+          "parts": [
+            {
+              "type": "recon-battalion",
+              "count": 1
+            }
+          ],
+          "name": "Armoured Reconnaissance"
+        }
+      ]
+    },
+    {
+      "id": "fr-light-armoured-division",
+      "name": "French light armoured division",
+      "source": "Yves Debay, Operation Daguet (1991); French Ministry of the Armed Forces, Daguet division histories. Simplified: battalion-sized regiments grouped by role.",
+      "groups": [
+        {
+          "short": "L",
+          "parts": [
+            {
+              "type": "recon-battalion",
+              "count": 2
+            },
+            {
+              "type": "tank-battalion",
+              "count": 1
+            }
+          ],
+          "name": "Light Armour"
+        },
+        {
+          "short": "I",
+          "parts": [
+            {
+              "type": "infantry-battalion",
+              "count": 2
+            }
+          ],
+          "name": "Infantry"
+        },
+        {
+          "short": "A",
+          "parts": [
+            {
+              "type": "artillery-battalion",
+              "count": 1
+            }
+          ],
+          "name": "Artillery"
+        }
+      ]
+    },
+    {
+      "id": "arab-armored-division",
+      "name": "Arab coalition armored division",
+      "source": "Pollack, Arabs at War (2002); Scales, Certain Victory (1993). Simplified: two armored brigades and one mechanized brigade.",
+      "groups": [
+        {
+          "short": "1",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 2
+            },
+            {
+              "type": "mech-battalion",
+              "count": 1
+            }
+          ],
+          "name": "1st Armored Brigade"
+        },
+        {
+          "short": "2",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 2
+            },
+            {
+              "type": "mech-battalion",
+              "count": 1
+            }
+          ],
+          "name": "2nd Armored Brigade"
+        },
+        {
+          "short": "3",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 1
+            },
+            {
+              "type": "mech-battalion",
+              "count": 2
+            }
+          ],
+          "name": "3rd Mechanized Brigade"
+        },
+        {
+          "short": "A",
+          "parts": [
+            {
+              "type": "artillery-battalion",
+              "count": 3
+            }
+          ],
+          "name": "Division Artillery"
+        }
+      ]
+    },
+    {
+      "id": "arab-mech-division",
+      "name": "Arab coalition mechanized division",
+      "source": "Pollack, Arabs at War (2002); Scales, Certain Victory (1993). Simplified: one armored brigade and two mechanized brigades.",
+      "groups": [
+        {
+          "short": "1",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 2
+            },
+            {
+              "type": "mech-battalion",
+              "count": 1
+            }
+          ],
+          "name": "1st Armored Brigade"
+        },
+        {
+          "short": "2",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 1
+            },
+            {
+              "type": "mech-battalion",
+              "count": 2
+            }
+          ],
+          "name": "2nd Mechanized Brigade"
+        },
+        {
+          "short": "3",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 1
+            },
+            {
+              "type": "mech-battalion",
+              "count": 2
+            }
+          ],
+          "name": "3rd Mechanized Brigade"
+        },
+        {
+          "short": "A",
+          "parts": [
+            {
+              "type": "artillery-battalion",
+              "count": 3
+            }
+          ],
+          "name": "Division Artillery"
+        }
+      ]
+    },
+    {
+      "id": "gcc-task-force",
+      "name": "Gulf states task force",
+      "source": "Pollack, Arabs at War (2002); Gulf War Air Power Survey, Vol. I (1993). Simplified: two brigade groups and artillery.",
+      "groups": [
+        {
+          "short": "1",
+          "parts": [
+            {
+              "type": "mech-battalion",
+              "count": 3
+            }
+          ],
+          "name": "1st Brigade Group"
+        },
+        {
+          "short": "2",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 1
+            },
+            {
+              "type": "mech-battalion",
+              "count": 2
+            }
+          ],
+          "name": "2nd Brigade Group"
+        },
+        {
+          "short": "A",
+          "parts": [
+            {
+              "type": "artillery-battalion",
+              "count": 2
+            }
+          ],
+          "name": "Artillery"
+        }
+      ]
+    },
+    {
+      "id": "iraqi-armored-division",
+      "name": "Iraqi armored division",
+      "source": "U.S. Army Intelligence Agency, How They Fight: Desert Shield Order of Battle Handbook (1990); Malovany, Wars of Modern Babylon (2017). Simplified: typical brigade structure, attachments omitted.",
+      "groups": [
+        {
+          "short": "1",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 3
+            },
+            {
+              "type": "mech-battalion",
+              "count": 1
+            }
+          ],
+          "name": "1st Armored Brigade"
+        },
+        {
+          "short": "2",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 3
+            },
+            {
+              "type": "mech-battalion",
+              "count": 1
+            }
+          ],
+          "name": "2nd Armored Brigade"
+        },
+        {
+          "short": "3",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 1
+            },
+            {
+              "type": "mech-battalion",
+              "count": 3
+            }
+          ],
+          "name": "3rd Mechanized Brigade"
+        },
+        {
+          "short": "A",
+          "parts": [
+            {
+              "type": "artillery-battalion",
+              "count": 3
+            }
+          ],
+          "name": "Division Artillery"
+        }
+      ]
+    },
+    {
+      "id": "iraqi-mech-division",
+      "name": "Iraqi mechanized division",
+      "source": "U.S. Army Intelligence Agency, How They Fight: Desert Shield Order of Battle Handbook (1990); Malovany, Wars of Modern Babylon (2017). Simplified: typical brigade structure, attachments omitted.",
+      "groups": [
+        {
+          "short": "1",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 1
+            },
+            {
+              "type": "mech-battalion",
+              "count": 3
+            }
+          ],
+          "name": "1st Mechanized Brigade"
+        },
+        {
+          "short": "2",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 1
+            },
+            {
+              "type": "mech-battalion",
+              "count": 3
+            }
+          ],
+          "name": "2nd Mechanized Brigade"
+        },
+        {
+          "short": "3",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 3
+            },
+            {
+              "type": "mech-battalion",
+              "count": 1
+            }
+          ],
+          "name": "3rd Armored Brigade"
+        },
+        {
+          "short": "A",
+          "parts": [
+            {
+              "type": "artillery-battalion",
+              "count": 3
+            }
+          ],
+          "name": "Division Artillery"
+        }
+      ]
+    },
+    {
+      "id": "iraqi-infantry-division",
+      "name": "Iraqi infantry division",
+      "source": "U.S. Army Intelligence Agency, How They Fight: Desert Shield Order of Battle Handbook (1990); Malovany, Wars of Modern Babylon (2017). Simplified: typical brigade structure, attachments omitted.",
+      "groups": [
+        {
+          "short": "1",
+          "parts": [
+            {
+              "type": "infantry-battalion",
+              "count": 3
+            }
+          ],
+          "name": "1st Infantry Brigade"
+        },
+        {
+          "short": "2",
+          "parts": [
+            {
+              "type": "infantry-battalion",
+              "count": 3
+            }
+          ],
+          "name": "2nd Infantry Brigade"
+        },
+        {
+          "short": "3",
+          "parts": [
+            {
+              "type": "infantry-battalion",
+              "count": 3
+            }
+          ],
+          "name": "3rd Infantry Brigade"
+        },
+        {
+          "short": "A",
+          "parts": [
+            {
+              "type": "artillery-battalion",
+              "count": 3
+            }
+          ],
+          "name": "Division Artillery"
+        }
+      ]
+    },
+    {
+      "id": "generic-armored-division",
+      "name": "Generic armored division",
+      "source": "Fictional, for test and sandbox scenarios.",
+      "groups": [
+        {
+          "short": "1",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 2
+            },
+            {
+              "type": "mech-battalion",
+              "count": 1
+            }
+          ],
+          "name": "1st Brigade"
+        },
+        {
+          "short": "2",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 2
+            },
+            {
+              "type": "mech-battalion",
+              "count": 1
+            }
+          ],
+          "name": "2nd Brigade"
+        },
+        {
+          "short": "A",
+          "parts": [
+            {
+              "type": "artillery-battalion",
+              "count": 2
+            }
+          ],
+          "name": "Artillery"
+        }
+      ]
+    },
+    {
+      "id": "generic-mech-division",
+      "name": "Generic mechanized division",
+      "source": "Fictional, for test and sandbox scenarios.",
+      "groups": [
+        {
+          "short": "1",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 1
+            },
+            {
+              "type": "mech-battalion",
+              "count": 2
+            }
+          ],
+          "name": "1st Brigade"
+        },
+        {
+          "short": "2",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 1
+            },
+            {
+              "type": "mech-battalion",
+              "count": 2
+            }
+          ],
+          "name": "2nd Brigade"
+        },
+        {
+          "short": "A",
+          "parts": [
+            {
+              "type": "artillery-battalion",
+              "count": 2
+            }
+          ],
+          "name": "Artillery"
+        }
+      ]
+    },
+    {
+      "id": "generic-infantry-division",
+      "name": "Generic infantry division",
+      "source": "Fictional, for test and sandbox scenarios.",
+      "groups": [
+        {
+          "short": "1",
+          "parts": [
+            {
+              "type": "infantry-battalion",
+              "count": 3
+            }
+          ],
+          "name": "1st Brigade"
+        },
+        {
+          "short": "2",
+          "parts": [
+            {
+              "type": "infantry-battalion",
+              "count": 3
+            }
+          ],
+          "name": "2nd Brigade"
+        },
+        {
+          "short": "A",
+          "parts": [
+            {
+              "type": "artillery-battalion",
+              "count": 2
+            }
+          ],
+          "name": "Artillery"
+        }
+      ]
+    },
+    {
+      "id": "generic-armored-brigade",
+      "name": "Generic armored brigade",
+      "source": "Fictional, for test and sandbox scenarios.",
+      "groups": [
+        {
+          "short": "B",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 2
+            },
+            {
+              "type": "mech-battalion",
+              "count": 1
+            },
+            {
+              "type": "artillery-battalion",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "test-division",
+      "name": "Test division",
+      "source": "Fictional, for engine tests.",
+      "groups": [
+        {
+          "short": "1",
+          "parts": [
+            {
+              "type": "tank-battalion",
+              "count": 2
+            },
+            {
+              "type": "mech-battalion",
+              "count": 1
+            }
+          ],
+          "name": "1st Brigade"
+        },
+        {
+          "short": "2",
+          "parts": [
+            {
+              "type": "mech-battalion",
+              "count": 2
+            },
+            {
+              "type": "infantry-battalion",
+              "count": 1
+            }
+          ],
+          "name": "2nd Brigade"
+        },
+        {
+          "short": "A",
+          "parts": [
+            {
+              "type": "artillery-battalion",
+              "count": 2
+            }
+          ],
+          "name": "Artillery"
+        }
+      ]
+    },
+    {
+      "id": "test-brigade",
+      "name": "Test brigade",
+      "source": "Fictional, for engine tests.",
+      "groups": [
+        {
+          "short": "B",
+          "parts": [
+            {
+              "type": "mech-battalion",
+              "count": 2
+            },
+            {
+              "type": "artillery-battalion",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

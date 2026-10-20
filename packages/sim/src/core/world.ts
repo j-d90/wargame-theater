@@ -1,4 +1,6 @@
 import type {
+  Branch,
+  Composition,
   Echelon,
   Effects,
   Position,
@@ -101,6 +103,45 @@ export interface Formation {
   /** Position at the moment of aggregation, so children move with the block on expand. */
   baselinePosition: Position | null;
   order: MoveOrder | null;
+  /** Composition id the formation breaks down into for a detailed battle, if any. */
+  composition: string | null;
+  /** Battalion type, for units generated from a composition. */
+  tacticalType: string | null;
+  /** Set on a battle's root formations: the open battle they are fought in, in detail. */
+  battle: string | null;
+  /** Under the player's direct tactical command; otherwise tactical AI follows the parent's intent. */
+  manual: boolean;
+}
+
+/** A battalion type, copied from the tactical catalog so saves are self-contained. */
+export interface TacticalTypeState {
+  id: string;
+  name: string;
+  abbr: string;
+  branch: Branch;
+  weight: number;
+  rangeKm: number;
+  rear: boolean;
+}
+
+/**
+ * A battle fought in detail. Its roots are the formations that were in the
+ * fight when it opened or joined later; they are expanded down to battalions
+ * while it lasts and collapsed back when it closes.
+ */
+export interface BattleState {
+  id: string;
+  name: string;
+  roots: string[];
+  openedTick: number;
+  /** Last tick opposing units were within contact range. */
+  lastContactTick: number;
+  center: Position;
+  radiusKm: number;
+  /** Strength each side brought into the battle. */
+  startStrength: Record<string, number>;
+  /** Who fired on whom on the last tick (each shooter's main target), for display. */
+  fire: [string, string][];
 }
 
 export interface SupplyNode {
@@ -311,6 +352,11 @@ export interface WorldState {
   contacts: [string, string][];
   /** Null for scenarios without a strategic layer. */
   strategy: StrategyState | null;
+  /** Battalion types and compositions used by this scenario's templates. */
+  tactical: { types: Record<string, TacticalTypeState>; compositions: Record<string, Composition> };
+  battles: Record<string, BattleState>;
+  /** Counter for battle ids. */
+  nextBattle: number;
 }
 
 /** Ids of a record in sorted order. All sim iteration goes through this. */
@@ -347,6 +393,7 @@ export function createWorld(resolved: ResolvedScenario, options: CreateWorldOpti
 
   for (const spec of scenario.formations) {
     let branch: string | null = null;
+    let composition: string | null = null;
     let stats: FormationStats = {
       strength: 0,
       establishment: 0,
@@ -362,6 +409,7 @@ export function createWorld(resolved: ResolvedScenario, options: CreateWorldOpti
       const t = units.get(spec.template);
       if (!t) throw new Error(`createWorld: unknown template "${spec.template}"`);
       branch = t.branch ?? null;
+      composition = t.composition ?? null;
       const pct = spec.strengthPct ?? 100;
       const supplyPerTick = Math.ceil((t.supplyPerTick * pct) / 100);
       const stockCap = supplyPerTick * TICKS_PER_DAY * t.stockDays;
@@ -398,6 +446,10 @@ export function createWorld(resolved: ResolvedScenario, options: CreateWorldOpti
       baseline: null,
       baselinePosition: null,
       order: null,
+      composition,
+      tacticalType: null,
+      battle: null,
+      manual: false,
     };
   }
   for (const id of sortedIds(formations)) {
@@ -466,6 +518,9 @@ export function createWorld(resolved: ResolvedScenario, options: CreateWorldOpti
     objectives: {},
     contacts: [],
     strategy: scenario.strategy ? createStrategy(scenario.strategy) : null,
+    tactical: tacticalFor(resolved, formations),
+    battles: {},
+    nextBattle: 1,
   };
 
   for (const s of scenario.sides) {
@@ -529,6 +584,26 @@ export function createWorld(resolved: ResolvedScenario, options: CreateWorldOpti
     side.initialCombatPower = sideCombatPower(world, side.id);
   }
   return world;
+}
+
+/** The compositions this scenario's formations can break down into, and their battalion types. */
+function tacticalFor(resolved: ResolvedScenario, formations: Record<string, Formation>): WorldState['tactical'] {
+  const out: WorldState['tactical'] = { types: {}, compositions: {} };
+  for (const id of sortedIds(formations)) {
+    const cid = formations[id]!.composition;
+    if (cid === null || out.compositions[cid]) continue;
+    const c = resolved.tactical.compositions.get(cid);
+    if (!c) throw new Error(`createWorld: unknown composition "${cid}"`);
+    out.compositions[cid] = structuredCloneJson(c);
+    for (const g of c.groups) {
+      for (const p of g.parts) {
+        const t = resolved.tactical.types.get(p.type);
+        if (!t) throw new Error(`createWorld: unknown tactical type "${p.type}"`);
+        out.types[t.id] = { ...t };
+      }
+    }
+  }
+  return out;
 }
 
 function createStrategy(st: ResolvedStrategy): StrategyState {

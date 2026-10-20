@@ -11,6 +11,7 @@ import { depotPhase } from '../supply/depots.ts';
 import { aiPhase } from '../ai/theater.ts';
 import { strategicAiPhase } from '../ai/strategy.ts';
 import { strategyPhase } from '../strategy/strategic.ts';
+import { battlePhase, battleUpkeep } from '../combat/battle.ts';
 
 /**
  * Advance the world by one fixed tick (15 minutes of game time). Mutates `world`.
@@ -29,6 +30,7 @@ export function step(world: WorldState, commands: readonly Command[] = []): void
   strategyPhase(world);
   strategicAiPhase(world);
   aiPhase(world);
+  battlePhase(world);
   depotPhase(world);
   movementPhase(world);
   combatPhase(world);
@@ -37,6 +39,7 @@ export function step(world: WorldState, commands: readonly Command[] = []): void
   consumptionPhase(world);
   fortifyPhase(world);
   objectivesPhase(world);
+  battleUpkeep(world);
 
   world.tick++;
 }

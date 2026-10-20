@@ -9,6 +9,7 @@
     "supplyPerTick": 22,
     "stockDays": 3,
     "speedKmPerDay": 80,
+    "composition": "us-armored-division",
     "source": "Abstract game values (strength, quality, supply, speed), not real equipment or unit data."
   },
   {
@@ -21,6 +22,7 @@
     "supplyPerTick": 20,
     "stockDays": 3,
     "speedKmPerDay": 75,
+    "composition": "us-mech-division",
     "source": "Abstract game values (strength, quality, supply, speed), not real equipment or unit data."
   },
   {
@@ -33,6 +35,7 @@
     "supplyPerTick": 8,
     "stockDays": 4,
     "speedKmPerDay": 40,
+    "composition": "us-light-division",
     "source": "Abstract game values (strength, quality, supply, speed), not real equipment or unit data."
   },
   {
@@ -45,6 +48,7 @@
     "supplyPerTick": 10,
     "stockDays": 4,
     "speedKmPerDay": 110,
+    "composition": "us-light-division",
     "source": "Abstract game values (strength, quality, supply, speed), not real equipment or unit data."
   },
   {
@@ -57,6 +61,7 @@
     "supplyPerTick": 7,
     "stockDays": 3,
     "speedKmPerDay": 90,
+    "composition": "us-cavalry-regiment",
     "source": "Abstract game values (strength, quality, supply, speed), not real equipment or unit data."
   },
   {
@@ -69,6 +74,7 @@
     "supplyPerTick": 16,
     "stockDays": 4,
     "speedKmPerDay": 50,
+    "composition": "usmc-division",
     "source": "Abstract game values (strength, quality, supply, speed), not real equipment or unit data."
   },
   {
@@ -81,6 +87,7 @@
     "supplyPerTick": 16,
     "stockDays": 3,
     "speedKmPerDay": 75,
+    "composition": "uk-armoured-division",
     "source": "Abstract game values (strength, quality, supply, speed), not real equipment or unit data."
   },
   {
@@ -93,6 +100,7 @@
     "supplyPerTick": 9,
     "stockDays": 4,
     "speedKmPerDay": 90,
+    "composition": "fr-light-armoured-division",
     "source": "Abstract game values (strength, quality, supply, speed), not real equipment or unit data."
   },
   {
@@ -105,6 +113,7 @@
     "supplyPerTick": 12,
     "stockDays": 3,
     "speedKmPerDay": 50,
+    "composition": "arab-armored-division",
     "source": "Abstract game values (strength, quality, supply, speed), not real equipment or unit data."
   },
   {
@@ -117,6 +126,7 @@
     "supplyPerTick": 12,
     "stockDays": 3,
     "speedKmPerDay": 45,
+    "composition": "arab-mech-division",
     "source": "Abstract game values (strength, quality, supply, speed), not real equipment or unit data."
   },
   {
@@ -129,6 +139,7 @@
     "supplyPerTick": 9,
     "stockDays": 3,
     "speedKmPerDay": 45,
+    "composition": "gcc-task-force",
     "source": "Abstract game values (strength, quality, supply, speed), not real equipment or unit data."
   },
   {
@@ -141,6 +152,7 @@
     "supplyPerTick": 14,
     "stockDays": 10,
     "speedKmPerDay": 45,
+    "composition": "iraqi-armored-division",
     "source": "Abstract game values (strength, quality, supply, speed), not real equipment or unit data."
   },
   {
@@ -153,6 +165,7 @@
     "supplyPerTick": 12,
     "stockDays": 10,
     "speedKmPerDay": 40,
+    "composition": "iraqi-mech-division",
     "source": "Abstract game values (strength, quality, supply, speed), not real equipment or unit data."
   },
   {
@@ -165,6 +178,7 @@
     "supplyPerTick": 9,
     "stockDays": 10,
     "speedKmPerDay": 35,
+    "composition": "iraqi-infantry-division",
     "source": "Abstract game values (strength, quality, supply, speed), not real equipment or unit data."
   },
   {
@@ -177,6 +191,7 @@
     "supplyPerTick": 12,
     "stockDays": 10,
     "speedKmPerDay": 40,
+    "composition": "iraqi-armored-division",
     "source": "Abstract game values (strength, quality, supply, speed), not real equipment or unit data."
   },
   {
@@ -189,6 +204,7 @@
     "supplyPerTick": 10,
     "stockDays": 10,
     "speedKmPerDay": 35,
+    "composition": "iraqi-mech-division",
     "source": "Abstract game values (strength, quality, supply, speed), not real equipment or unit data."
   },
   {
@@ -201,6 +217,7 @@
     "supplyPerTick": 6,
     "stockDays": 10,
     "speedKmPerDay": 20,
+    "composition": "iraqi-infantry-division",
     "source": "Abstract game values (strength, quality, supply, speed), not real equipment or unit data."
   }
 ]

@@ -59,3 +59,49 @@ describe('SimHost', () => {
     expect(host.advance(5)).toBe(0);
   });
 });
+
+describe('zooming into a battle', () => {
+  it("opens Desert Storm's largest battle and sends its battalions within the 200 ms budget", { timeout: 60_000 }, () => {
+    const host = new SimHost('desert-storm');
+    // Run AI against AI into the ground war.
+    host.command({ type: 'setAiControl', side: 'coalition', controlled: true });
+    host.advance(37 * 96);
+    // The largest group of formations linked by contact.
+    const links = new Map<string, string[]>();
+    for (const [a, b] of host.world.contacts) {
+      links.set(a, [...(links.get(a) ?? []), b]);
+      links.set(b, [...(links.get(b) ?? []), a]);
+    }
+    let best: string[] = [];
+    const seen = new Set<string>();
+    for (const start of links.keys()) {
+      if (seen.has(start)) continue;
+      const group = [start];
+      seen.add(start);
+      for (let i = 0; i < group.length; i++) {
+        for (const n of links.get(group[i]!) ?? []) if (!seen.has(n)) (seen.add(n), group.push(n));
+      }
+      if (group.length > best.length) best = group;
+    }
+    expect(best.length).toBeGreaterThanOrEqual(2);
+
+    const t0 = performance.now();
+    const battle = host.openBattle(best[0]!);
+    const summary = host.snapshot(battle);
+    const ms = performance.now() - t0;
+    expect(summary.tactical?.battle.id).toBe(battle);
+    expect(summary.tactical!.units.length).toBeGreaterThan(best.length);
+    expect(ms).toBeLessThan(200);
+    // Zooming out again: the theater summary without battalion detail.
+    const t1 = performance.now();
+    const theater = host.snapshot(null);
+    expect(performance.now() - t1).toBeLessThan(200);
+    expect(theater.tactical).toBeNull();
+    expect(theater.active.filter((f) => f.battle === battle).length).toBe(best.length);
+  });
+
+  it('explains why a battle cannot be opened', () => {
+    const host = new SimHost('desert-storm');
+    expect(() => host.openBattle('us-1ad')).toThrow(/not in contact/);
+  });
+});

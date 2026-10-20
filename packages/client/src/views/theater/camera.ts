@@ -26,8 +26,8 @@ export function toWorld(cam: Camera, sx: number, sy: number): { x: number; y: nu
 }
 
 /** Zoom by `factor` keeping the world point under (sx, sy) fixed on screen. */
-export function zoomAt(cam: Camera, sx: number, sy: number, factor: number): Camera {
-  const scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, cam.scale * factor));
+export function zoomAt(cam: Camera, sx: number, sy: number, factor: number, maxScale = MAX_SCALE): Camera {
+  const scale = Math.min(maxScale, Math.max(MIN_SCALE, cam.scale * factor));
   const w = toWorld(cam, sx, sy);
   return { scale, x: sx - w.x * scale, y: sy - w.y * scale };
 }
@@ -37,10 +37,10 @@ export function pan(cam: Camera, dx: number, dy: number): Camera {
 }
 
 /** Camera that shows `b` centred in a view of `w` x `h` pixels with `pad` pixels to spare. */
-export function fit(b: Bounds, w: number, h: number, pad = 40): Camera {
+export function fit(b: Bounds, w: number, h: number, pad = 40, maxScale = MAX_SCALE): Camera {
   const bw = Math.max(1, b.maxX - b.minX);
   const bh = Math.max(1, b.maxY - b.minY);
-  const scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, Math.min((w - 2 * pad) / bw, (h - 2 * pad) / bh)));
+  const scale = Math.min(maxScale, Math.max(MIN_SCALE, Math.min((w - 2 * pad) / bw, (h - 2 * pad) / bh)));
   return { scale, x: w / 2 - ((b.minX + b.maxX) / 2) * scale, y: h / 2 - ((b.minY + b.maxY) / 2) * scale };
 }
 

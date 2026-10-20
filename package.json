@@ -17,7 +17,8 @@
     "sim": "tsx tools/run-scenario.ts",
     "build:map": "tsx tools/geo/build-gulf-map.ts",
     "calibrate": "tsx tools/calibrate.ts",
-    "experiments": "tsx tools/experiments.ts"
+    "experiments": "tsx tools/experiments.ts",
+    "tactical-check": "tsx tools/tactical-check.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",

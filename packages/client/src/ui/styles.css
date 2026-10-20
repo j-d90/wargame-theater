@@ -495,3 +495,13 @@ main[hidden] {
     grid-template-columns: 1fr;
   }
 }
+
+/* Tactical view */
+button.danger.active {
+  background: #e0483e;
+  color: #fff;
+}
+.switch-time {
+  margin-top: 16px;
+  font-size: 11px;
+}

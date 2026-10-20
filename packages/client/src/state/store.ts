@@ -22,10 +22,21 @@ export interface AppState {
   mode: Mode;
   messages: Message[];
   /** Which command level is on screen. */
-  view: 'theater' | 'strategic';
+  view: 'theater' | 'strategic' | 'tactical';
+  /** The detailed battle being watched, if any. */
+  battle: string | null;
+  /** Battalions selected in the tactical view. */
+  tacticalSelection: string[];
+  tacticalMode: TacticalMode;
+  /** When the player asked to switch level (performance.now()), until the new view has drawn. */
+  switchStart: number | null;
+  /** How long the last switch in each direction took, ms. */
+  switchMs: { in: number | null; out: number | null };
   /** Ask the map to centre on a point; `seq` changes on every request. */
   focus: { x: number; y: number; seq: number } | null;
 }
+
+export type TacticalMode = 'select' | 'move' | 'attack';
 
 type Listener = () => void;
 
@@ -55,6 +66,11 @@ export const store = createStore<AppState>({
   selection: null,
   mode: 'select',
   view: 'theater',
+  battle: null,
+  tacticalSelection: [],
+  tacticalMode: 'select',
+  switchStart: null,
+  switchMs: { in: null, out: null },
   messages: [],
   focus: null,
 });

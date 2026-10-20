@@ -1,11 +1,12 @@
 // The theater map: shaded relief, borders and cities, the supply network, and
 // unit counters, drawn with PixiJS. It only draws what the latest snapshot says
 // and reports clicks; it never talks to the sim directly.
-import { Application, Assets, Container, Graphics, Sprite, Text, type Texture } from 'pixi.js';
+import { Application, Assets, Container, Graphics, Sprite, type Texture } from 'pixi.js';
 import type { FormationSummary, WorldSummary } from '@tow/sim';
 import { boundsOf, fit, pan, toWorld, zoomAt, type Camera } from './camera.ts';
 import { hitTest, type Selection } from './hit.ts';
 import { COLORS, COUNTER_H, COUNTER_W, ECHELON_MARK, NODE_SIZE, statusColor } from './style.ts';
+import { LabelPool, dashed, drawGeoLines } from '../draw.ts';
 
 export interface GeoData {
   widthKm: number;
@@ -28,6 +29,8 @@ export type Mode = 'select' | 'move';
 
 export interface TheaterCallbacks {
   onClick(world: { x: number; y: number }, hit: Selection | null): void;
+  /** A double click; `scale` is the current pixels per km, for judging what is near. */
+  onDoubleClick?(world: { x: number; y: number }, hit: Selection | null, scale: number): void;
 }
 
 type Pt = { x: number; y: number };
@@ -61,72 +64,6 @@ function labelRect(text: string, size: number, x: number, y: number, anchorY: nu
   const h = size * 1.25 * s;
   const top = y - h * anchorY;
   return { x0: x - w / 2, y0: top, x1: x + w / 2, y1: top + h, owner };
-}
-
-/** Draws a dashed line; dash and gap are in world units. */
-function dashed(g: Graphics, a: Pt, b: Pt, dash: number, gap: number): Graphics {
-  const len = Math.hypot(b.x - a.x, b.y - a.y);
-  if (len === 0) return g;
-  const ux = (b.x - a.x) / len;
-  const uy = (b.y - a.y) / len;
-  for (let d = 0; d < len; d += dash + gap) {
-    const e = Math.min(len, d + dash);
-    g.moveTo(a.x + ux * d, a.y + uy * d).lineTo(a.x + ux * e, a.y + uy * e);
-  }
-  return g;
-}
-
-function polyline(g: Graphics, flat: number[]): Graphics {
-  g.moveTo(flat[0]!, flat[1]!);
-  for (let i = 2; i < flat.length; i += 2) g.lineTo(flat[i]!, flat[i + 1]!);
-  return g;
-}
-
-/** Reuses Text objects by key across redraws; hides the ones not used this frame. */
-class LabelPool {
-  private texts = new Map<string, Text>();
-  private used = new Set<string>();
-  constructor(private layer: Container) {}
-
-  begin() {
-    this.used.clear();
-  }
-
-  place(
-    key: string,
-    text: string,
-    x: number,
-    y: number,
-    scale: number,
-    style: { size: number; color: number; halo?: number; bold?: boolean; anchorY?: number },
-  ) {
-    let t = this.texts.get(key);
-    if (!t) {
-      t = new Text({
-        text,
-        style: {
-          fontFamily: 'system-ui, sans-serif',
-          fontSize: style.size,
-          fill: style.color,
-          fontWeight: style.bold ? '700' : '500',
-          stroke: { color: style.halo ?? 0x101214, width: 3, join: 'round' },
-        },
-        resolution: Math.max(2, globalThis.devicePixelRatio ?? 1),
-      });
-      t.anchor.set(0.5, style.anchorY ?? 0);
-      this.layer.addChild(t);
-      this.texts.set(key, t);
-    }
-    if (t.text !== text) t.text = text;
-    t.position.set(x, y);
-    t.scale.set(1 / scale);
-    t.visible = true;
-    this.used.add(key);
-  }
-
-  end() {
-    for (const [key, t] of this.texts) if (!this.used.has(key)) t.visible = false;
-  }
 }
 
 export class TheaterView {
@@ -295,6 +232,10 @@ export class TheaterView {
       { passive: false },
     );
     on('contextmenu', (e) => e.preventDefault());
+    on('dblclick', (e) => {
+      const w = toWorld(this.cam, e.offsetX, e.offsetY);
+      this.callbacks.onDoubleClick?.(w, this.summary ? hitTest(this.summary, w, this.cam.scale) : null, this.cam.scale);
+    });
   }
 
   // ---------------------------------------------------------------- drawing
@@ -330,11 +271,7 @@ export class TheaterView {
     this.cityLabels.begin();
     if (geo) {
       // Outline the edge of the map data so the empty area beyond reads as "off the map".
-      g.rect(0, 0, geo.widthKm, geo.heightKm).stroke({ width: 1.5 * s, color: 0x5a6470 });
-      for (const line of geo.lakes) polyline(g, line).stroke({ width: 1 * s, color: COLORS.coast, alpha: 0.9 });
-      for (const r of geo.rivers) polyline(g, r.line).stroke({ width: 1.4 * s, color: COLORS.river, alpha: 0.85 });
-      for (const line of geo.coast) polyline(g, line).stroke({ width: 1.2 * s, color: COLORS.coast, alpha: 0.9 });
-      for (const line of geo.borders) polyline(g, line).stroke({ width: 1.6 * s, color: COLORS.border, alpha: 0.85 });
+      drawGeoLines(g, geo, s);
       const minPop = this.cam.scale >= 1.6 ? 0 : this.cam.scale >= 0.9 ? 400_000 : 1_000_000;
       const nodes = this.summary?.nodes ?? [];
       for (const c of geo.cities) {
@@ -502,6 +439,23 @@ export class TheaterView {
       g.circle(x, y, 7 * s).fill({ color: COLORS.contact, alpha: 0.35 });
       g.moveTo(x - 5 * s, y - 5 * s).lineTo(x + 5 * s, y + 5 * s).moveTo(x + 5 * s, y - 5 * s).lineTo(x - 5 * s, y + 5 * s);
       g.stroke({ width: 2 * s, color: COLORS.contact });
+    }
+
+    // Battles fought in detail: a dashed ring over the battle area. Double-click to zoom in.
+    for (const b of sum.battles) {
+      const { x, y } = b.center;
+      const r = Math.max(b.radiusKm, 14 * s);
+      g.circle(x, y, r).fill({ color: COLORS.contact, alpha: 0.08 });
+      for (let a = 0; a < 48; a += 2) {
+        const a0 = (a / 48) * Math.PI * 2;
+        const a1 = ((a + 1) / 48) * Math.PI * 2;
+        g.moveTo(x + Math.cos(a0) * r, y + Math.sin(a0) * r).lineTo(x + Math.cos(a1) * r, y + Math.sin(a1) * r);
+      }
+      g.stroke({ width: 2 * s, color: COLORS.contact, alpha: 0.9 });
+      const ly = y - r - 3 * s;
+      if (this.occupancy.claim(labelRect(b.name, 11, x, ly, 1, s, b.id))) {
+        this.unitLabels.place(`battle:${b.id}`, b.name, x, ly, this.cam.scale, { size: 11, color: 0xffc58a, bold: true, anchorY: 1 });
+      }
     }
 
     for (const f of sum.active) this.drawCounter(g, f, f.id === selectedId, s);

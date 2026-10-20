@@ -2,7 +2,7 @@
 // for the M4 experiments comparing strategic choices. Shared by the tests
 // and tools/calibrate.ts.
 import { loadScenario, scenarioFiles, validateScenario, type ScenarioInput } from '@tow/content';
-import { TICKS_PER_DAY, activeFormations, createWorld, fightingValue, frontier, run, type WorldState } from '../src/index.ts';
+import { TICKS_PER_DAY, activeFormations, battleMembers, createWorld, fightingValue, frontier, step, type Command, type WorldState } from '../src/index.ts';
 
 const RG = 'iq-rgfc';
 
@@ -41,6 +41,9 @@ export interface CampaignMetrics {
   /** Iraqi fighting value when the ground war began, share of the start. */
   iraqPowerAtGroundWar: number | null;
   msPerTick: number;
+  /** Detailed battles opened, and the most battalions fighting in detail at once. */
+  battlesOpened: number;
+  peakDetailedUnits: number;
 }
 
 /** The Desert Storm scenario with an edit applied, for experiments. */
@@ -68,7 +71,26 @@ export const POLICIES = {
   },
 } satisfies Record<string, (raw: ScenarioInput) => void>;
 
-export function runCampaign(seed: number, edit: (raw: ScenarioInput) => void = POLICIES.historical): CampaignMetrics {
+/** Commands that open a detailed battle for every contact not yet fought in detail (the M5 campaign check). */
+export function openAllBattles(world: WorldState): Command[] {
+  const fighting = battleMembers(world);
+  const open = new Set<string>();
+  const out: Command[] = [];
+  for (const [a, b] of world.contacts) {
+    if (fighting.has(a) || fighting.has(b) || open.has(a) || open.has(b)) continue;
+    open.add(a);
+    open.add(b);
+    out.push({ type: 'openBattle', formation: a });
+  }
+  return out;
+}
+
+export interface CampaignOptions {
+  /** Fight every battle in detail, opening them as contacts appear (checked hourly). */
+  detailedBattles?: boolean;
+}
+
+export function runCampaign(seed: number, edit: (raw: ScenarioInput) => void = POLICIES.historical, options: CampaignOptions = {}): CampaignMetrics {
   const result = validateScenario(variant(edit));
   if (!result.ok) throw new Error(result.errors.join('\n'));
   const world = createWorld(result.value, { seed });
@@ -84,12 +106,16 @@ export function runCampaign(seed: number, edit: (raw: ScenarioInput) => void = P
     for (const f of activeFormations(w)) if (f.side === 'iraq') iraq += fightingValue(f);
     return { iraq, rg: groupValue(w, RG, true), regular: groupValue(w, RG, false) };
   };
-  run(world, days * TICKS_PER_DAY, (w) => {
+  let peakDetailedUnits = 0;
+  for (let t = 0; t < days * TICKS_PER_DAY; t++) {
+    const w = world;
+    step(w, options.detailedBattles && w.tick % 4 === 0 ? openAllBattles(w) : []);
+    if (options.detailedBattles && Object.keys(w.battles).length > 0) peakDetailedUnits = Math.max(peakDetailedUnits, battleMembers(w).size);
     if (iraqPowerAtGroundWar === null && w.sides['coalition']!.ai?.offensiveTick !== null) {
       iraqPowerAtGroundWar = measure(w).iraq / w.sides['iraq']!.initialCombatPower;
     }
     if (atEnd === null && w.strategy?.ceasefire.tick != null) atEnd = measure(w);
-  });
+  }
   const ms = performance.now() - started;
   const st = world.strategy!;
   const end = atEnd ?? measure(world);
@@ -116,6 +142,8 @@ export function runCampaign(seed: number, edit: (raw: ScenarioInput) => void = P
     minSupport: Math.min(...Object.values(st.actors).filter((a) => a.side === 'coalition' && a.support !== null).map((a) => a.support!)),
     iraqPowerAtGroundWar,
     msPerTick: ms / (days * TICKS_PER_DAY),
+    battlesOpened: world.nextBattle - 1,
+    peakDetailedUnits,
   };
 }
 
